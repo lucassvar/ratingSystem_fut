@@ -1,7 +1,6 @@
 # Competitions with Advanced Data from Opta
 
 ## Men's Leagues
-
 ### Domestic Leagues
 
 -   🇬🇧 Premier League
@@ -28,8 +27,8 @@
 -   UEFA Conference League
 -   Copa Libertadores
 
+---------------------------------------------------------------------------
 ## Women's Leagues
-
 ### Domestic Leagues
 
 -   🏴󠁧󠁢󠁥󠁮󠁧󠁿 FA Women's Super League
