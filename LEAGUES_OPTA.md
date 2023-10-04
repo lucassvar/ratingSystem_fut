@@ -1,9 +1,10 @@
 # Competitions with Advanced Data from Opta
 
 ## Men's Leagues
-### Domestic Leagues
 
--   🇬🇧 Premier League
+**Domestic Leagues**
+
+-   🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League
 -   🇪🇸 La Liga
 -   🇮🇹 Serie A
 -   🇩🇪 Bundesliga
@@ -20,16 +21,16 @@
 -   🇩🇪 2. Bundesliga
 -   🇮🇹 Serie B
 
-## International Cups
+**International Cups**
 
 -   UEFA Champions League
 -   UEFA Europa League
 -   UEFA Conference League
 -   Copa Libertadores
 
----------------------------------------------------------------------------
 ## Women's Leagues
-### Domestic Leagues
+
+**Domestic Leagues**
 
 -   🏴󠁧󠁢󠁥󠁮󠁧󠁿 FA Women's Super League
 -   🇪🇸 Liga F
@@ -39,6 +40,6 @@
 -   🇺🇸 NWSL
 -   🇦🇺 A-League
 
-## International Cups
+**International Cups**
 
 -   UEFA Women's Champions League
