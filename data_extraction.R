@@ -149,5 +149,8 @@ football_data <- function(end_year = NA, links_sel = NULL){
 }
 
 
-all_match_URLs <- get_all_match_urls(year = c(2018))
-football_data(links_sel = all_match_URLs[1:200])
+all_match_URLs <- get_all_match_urls(year = c(2024)) #1922
+football_data(links_sel = all_match_URLs)
+
+
+# until link 2000 (year 2018)
