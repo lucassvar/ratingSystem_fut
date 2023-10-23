@@ -8,23 +8,29 @@ get_all_match_urls <- function(year = NA){
     year <- as.numeric(format(Sys.Date(), "%Y")) + (as.numeric(format(Sys.Date(), "%m")) > 7)
   }
   
-  first_tier_countries <- c("ENG","ESP","GER","ITA","FRA","NED","POR","BEL")
-  american_countries <- c("ARG","BRA","MEX","USA")
+  # Countries to extract data
+  first_tier_countries <- c("ENG","ESP","GER","ITA","FRA","NED","POR","BEL", "ARG","BRA","MEX","USA")
   second_tier_countries <- c("ENG","ESP","GER","ITA","FRA")
-  women_countries <- c("ENG", "ESP", "GER", "ITA", "FRA", "AUS")
+  women_countries <- c("ENG", "ESP", "GER", "ITA", "FRA", "AUS", "USA")
   
-  all_match_urls <- c(
+  # Masculine Football
+  match_urls_MASC <- c(
     fb_match_urls(first_tier_countries, "M", year, "1st"),
-    fb_match_urls(american_countries, "M", year, "1st"),
     fb_match_urls(second_tier_countries, "M", year, "2nd"),
-    fb_match_urls(women_countries, "F", year, "1st"),
-    fb_match_urls("USA", "F", year, "1st"),
     fb_match_urls("", "M", year, non_dom_league_url = "https://fbref.com/en/comps/14/history/Copa-Libertadores-Seasons"),
     fb_match_urls("", "M", year, non_dom_league_url = "https://fbref.com/en/comps/8/history/Champions-League-Seasons"),
     fb_match_urls("", "M", year, non_dom_league_url = "https://fbref.com/en/comps/19/history/Europa-League-Seasons"),
-    fb_match_urls("", "M", year, non_dom_league_url = "https://fbref.com/en/comps/882/history/Europa-Conference-League-Seasons"),
+    fb_match_urls("", "M", year, non_dom_league_url = "https://fbref.com/en/comps/882/history/Europa-Conference-League-Seasons")
+  )
+  
+  # Feminine Football
+  match_urls_FEM <- c(
+    fb_match_urls(women_countries, "F", year, "1st"),
     fb_match_urls("", "F", year, non_dom_league_url = "https://fbref.com/en/comps/181/history/Champions-League-Seasons")
   )
+  
+  # Save both groups of links in same variable
+  all_match_urls <- list(match_urls_MASC, match_urls_FEM)
   
   return(all_match_urls)
 }
@@ -45,7 +51,8 @@ football_data <- function(end_year = NA, links_sel = NULL){
   if (is.null(links_sel)){
     links_sel <- get_all_match_urls(year = end_year)
   }
-  new_links <- setdiff(links_sel, used_links)
+  masc_links <- setdiff(links_sel[[1]], used_links)
+  fem_links <- setdiff(links_sel[[2]], used_links)
   
   # Stat types used
   stat_types <- c("passing", "passing_types", "defense", "possession", "misc")
@@ -53,25 +60,49 @@ football_data <- function(end_year = NA, links_sel = NULL){
   # Empty data frames to save the data
   playersMatchLogs <- teamsMatchLogs <- c()
   
-  # Extract shooting logs and keeper data (for PLY and TEAM)
+  # Extract shooting logs
   print("Shooting Logs")
-  sh_logs <- fb_match_shooting(new_links)
+  fem_sh_logs <- fb_match_shooting(fem_links)
+  fem_sh_logs$Squad <- paste0(fem_sh_logs$Squad, " (Women)") # Add reference to women teams
+  masc_sh_logs <- fb_match_shooting(masc_links)
+  sh_logs <- rbind(fem_sh_logs, masc_sh_logs)
+  
+  # Extract keeper data
   print("Player - Keeper")
-  ply_keeper <- fb_advanced_match_stats(match_url = new_links, stat_type = "keeper", team_or_player = "player")
+  fem_ply_keeper <- fb_advanced_match_stats(match_url = fem_links, stat_type = "keeper", team_or_player = "player")
+  fem_ply_keeper$Team <- paste0(fem_ply_keeper$Team, " (Women)") # Add reference to women teams
+  masc_ply_keeper <- fb_advanced_match_stats(match_url = masc_links, stat_type = "keeper", team_or_player = "player")
+  ply_keeper <- rbind(fem_ply_keeper, masc_ply_keeper)
+  
   print("Team - Keeper")
-  team_keeper <- fb_advanced_match_stats(match_url = new_links, stat_type = "keeper", team_or_player = "team")
+  fem_team_keeper <- fb_advanced_match_stats(match_url = fem_links, stat_type = "keeper", team_or_player = "team")
+  fem_team_keeper$Team <- paste0(fem_team_keeper$Team, " (Women)") # Add reference to women teams
+  masc_team_keeper <- fb_advanced_match_stats(match_url = masc_links, stat_type = "keeper", team_or_player = "team")
+  team_keeper <- rbind(fem_team_keeper, masc_team_keeper)
   
   
   # For loop to extract the match logs from each 
   for (stat in stat_types) {
     print(paste("Player -", stat))
-    playerML <- fb_advanced_match_stats(match_url = new_links,
+    fem_playerML <- fb_advanced_match_stats(match_url = fem_links,
                                         stat_type = stat,
                                         team_or_player = "player")
+    fem_playerML$Team <- paste0(fem_playerML$Team, " (Women)") # Add reference to women teams
+    masc_playerML <- fb_advanced_match_stats(match_url = masc_links,
+                                            stat_type = stat,
+                                            team_or_player = "player")
+    playerML <- rbind(fem_playerML, masc_playerML)
+    
+    
     print(paste("Team -", stat))
-    teamML <- fb_advanced_match_stats(match_url = new_links,
-                                      stat_type = stat,
-                                      team_or_player = "team")
+    fem_teamML <- fb_advanced_match_stats(match_url = fem_links,
+                                            stat_type = stat,
+                                            team_or_player = "team")
+    fem_teamML$Team <- paste0(fem_teamML$Team, " (Women)") # Add reference to women teams
+    masc_teamML <- fb_advanced_match_stats(match_url = masc_links,
+                                             stat_type = stat,
+                                             team_or_player = "team")
+    teamML <- rbind(fem_teamML, masc_teamML)
     
     # Merge the PLAYER data of the new stat type with the previous ones (if exists)
     if (is.null(playersMatchLogs)) {
@@ -149,8 +180,5 @@ football_data <- function(end_year = NA, links_sel = NULL){
 }
 
 
-all_match_URLs <- get_all_match_urls(year = c(2024)) #1922
-football_data(links_sel = all_match_URLs)
-
-
-# until link 2000 (year 2018)
+all_match_URLs <- get_all_match_urls(year = c(2024))
+football_data(links_sel = all_match_URLs[1:3])
