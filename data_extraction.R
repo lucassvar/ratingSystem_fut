@@ -137,7 +137,7 @@ football_data <- function(end_year = NA, links_sel = NULL, links_examined = 1:20
   
   
   # Add the links extracted to the used data frames and save it
-  used_links <- c(used_links, playersMatchLogs$Game_URL)
+  used_links <- c(used_links, unique(playersMatchLogs$Game_URL))
   save(used_links, file = "rda/used_links.rda")
   
   
@@ -183,4 +183,4 @@ football_data <- function(end_year = NA, links_sel = NULL, links_examined = 1:20
 
 
 all_match_URLs <- get_all_match_urls(year = c(2024))
-football_data(links_sel = all_match_URLs, links_examined = 1:5)
+football_data(links_sel = all_match_URLs, links_examined = 1:50)
