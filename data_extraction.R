@@ -37,7 +37,7 @@ get_all_match_urls <- function(year = NA){
 
 
 # Function to extract the data from a specific year
-football_data <- function(end_year = NA, links_sel = NULL){
+football_data <- function(end_year = NA, links_sel = NULL, links_examined = 1:20){
   start_time <- Sys.time()
   
   # Load links already used (if there are any)
@@ -51,8 +51,8 @@ football_data <- function(end_year = NA, links_sel = NULL){
   if (is.null(links_sel)){
     links_sel <- get_all_match_urls(year = end_year)
   }
-  masc_links <- setdiff(links_sel[[1]], used_links)
-  fem_links <- setdiff(links_sel[[2]], used_links)
+  masc_links <- setdiff(links_sel[[1]], used_links)[links_examined]
+  fem_links <- setdiff(links_sel[[2]], used_links)[links_examined]
   
   # Stat types used
   stat_types <- c("passing", "passing_types", "defense", "possession", "misc")
@@ -63,21 +63,24 @@ football_data <- function(end_year = NA, links_sel = NULL){
   # Extract shooting logs
   print("Shooting Logs")
   fem_sh_logs <- fb_match_shooting(fem_links)
-  fem_sh_logs$Squad <- paste0(fem_sh_logs$Squad, " (Women)") # Add reference to women teams
   masc_sh_logs <- fb_match_shooting(masc_links)
+  fem_sh_logs$Sex <- rep("W", nrow(fem_sh_logs))
+  masc_sh_logs$Sex <- rep("M", nrow(masc_sh_logs))
   sh_logs <- rbind(fem_sh_logs, masc_sh_logs)
   
   # Extract keeper data
   print("Player - Keeper")
   fem_ply_keeper <- fb_advanced_match_stats(match_url = fem_links, stat_type = "keeper", team_or_player = "player")
-  fem_ply_keeper$Team <- paste0(fem_ply_keeper$Team, " (Women)") # Add reference to women teams
   masc_ply_keeper <- fb_advanced_match_stats(match_url = masc_links, stat_type = "keeper", team_or_player = "player")
+  fem_ply_keeper$Sex <- rep("W", nrow(fem_ply_keeper))
+  masc_ply_keeper$Sex <- rep("M", nrow(masc_ply_keeper))
   ply_keeper <- rbind(fem_ply_keeper, masc_ply_keeper)
   
   print("Team - Keeper")
   fem_team_keeper <- fb_advanced_match_stats(match_url = fem_links, stat_type = "keeper", team_or_player = "team")
-  fem_team_keeper$Team <- paste0(fem_team_keeper$Team, " (Women)") # Add reference to women teams
   masc_team_keeper <- fb_advanced_match_stats(match_url = masc_links, stat_type = "keeper", team_or_player = "team")
+  fem_team_keeper$Sex <- rep("W", nrow(fem_team_keeper))
+  masc_team_keeper$Sex <- rep("M", nrow(masc_team_keeper))
   team_keeper <- rbind(fem_team_keeper, masc_team_keeper)
   
   
@@ -87,10 +90,11 @@ football_data <- function(end_year = NA, links_sel = NULL){
     fem_playerML <- fb_advanced_match_stats(match_url = fem_links,
                                         stat_type = stat,
                                         team_or_player = "player")
-    fem_playerML$Team <- paste0(fem_playerML$Team, " (Women)") # Add reference to women teams
     masc_playerML <- fb_advanced_match_stats(match_url = masc_links,
                                             stat_type = stat,
                                             team_or_player = "player")
+    fem_playerML$Sex <- rep("W", nrow(fem_playerML))
+    masc_playerML$Sex <- rep("M", nrow(masc_playerML))
     playerML <- rbind(fem_playerML, masc_playerML)
     
     
@@ -98,10 +102,11 @@ football_data <- function(end_year = NA, links_sel = NULL){
     fem_teamML <- fb_advanced_match_stats(match_url = fem_links,
                                             stat_type = stat,
                                             team_or_player = "team")
-    fem_teamML$Team <- paste0(fem_teamML$Team, " (Women)") # Add reference to women teams
     masc_teamML <- fb_advanced_match_stats(match_url = masc_links,
                                              stat_type = stat,
                                              team_or_player = "team")
+    fem_teamML$Sex <- rep("W", nrow(fem_teamML))
+    masc_teamML$Sex <- rep("M", nrow(masc_teamML))
     teamML <- rbind(fem_teamML, masc_teamML)
     
     # Merge the PLAYER data of the new stat type with the previous ones (if exists)
@@ -134,9 +139,6 @@ football_data <- function(end_year = NA, links_sel = NULL){
   # Add the links extracted to the used data frames and save it
   used_links <- c(used_links, playersMatchLogs$Game_URL)
   save(used_links, file = "rda/used_links.rda")
-  
-  # Return all the data frames generated
-  all_dfs <- list(sh_logs, playersMatchLogs, teamsMatchLogs, ply_keeper, team_keeper)
   
   
   # Save the data frames in the rda folder
@@ -181,4 +183,4 @@ football_data <- function(end_year = NA, links_sel = NULL){
 
 
 all_match_URLs <- get_all_match_urls(year = c(2024))
-football_data(links_sel = all_match_URLs[1:3])
+football_data(links_sel = all_match_URLs, links_examined = 1:5)
