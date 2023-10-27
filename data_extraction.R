@@ -248,4 +248,4 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
 
 
 all_match_URLs <- get_all_match_urls(year = c(2024))
-football_data(links_sel = all_match_URLs, links_examined = 1:100)
+fut_data_extraction(links_sel = all_match_URLs, links_examined = 1:10)
