@@ -83,7 +83,65 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   } else {
     sh_logs <- bind_rows(fem_sh_logs, masc_sh_logs)
   }
-  
+  # Convert columns to numeric and create new analysis columns (if sh_logs exists)
+  if (!is.null(sh_logs)) {
+    # Function to change the Minute column to numeric (handles "90+2", converts to 92)
+    mins_to_numeric <- function(x) {
+      if (grepl("\\+", x)) {
+        parts <- strsplit(x, "\\+")
+        return(as.numeric(parts[[1]][1]) + as.numeric(parts[[1]][2]))
+      } else {
+        return(as.numeric(x))
+      }
+    }
+    sh_logs$Minute <- sapply(sh_logs$Minute, mins_to_numeric)
+    sh_logs <- {sh_logs %>% mutate(
+      xG = as.numeric(xG),
+      PSxG = as.numeric(PSxG),
+      Head_xG = case_when(`Body Part` == "Head" ~ xG,
+                          TRUE ~ NA_real_),
+      Head_PSxG = case_when(`Body Part` == "Head" ~ PSxG,
+                            TRUE ~ NA_real_),
+      Head_PSxG_minus_xG = case_when(`Body Part` == "Head" & !is.na(Head_PSxG) & !is.na(Head_xG) ~ Head_PSxG - Head_xG,
+                                     TRUE ~ NA_real_),
+      Head_Gls_minus_xG = case_when(`Body Part` == "Head" & Outcome == "Goal" ~ 1-xG,
+                                    `Body Part` == "Head" & Outcome != "Goal" ~ 0-xG,
+                                    TRUE ~ NA_real_),
+      
+      RightF_xG = case_when(`Body Part` == "Right Foot" ~ xG,
+                            TRUE ~ NA_real_),
+      RightF_PSxG = case_when(`Body Part` == "Right Foot" ~ PSxG,
+                              TRUE ~ NA_real_),
+      RightF_PSxG_minus_xG = case_when(`Body Part` == "Right Foot" & !is.na(RightF_PSxG) & !is.na(RightF_xG) ~ RightF_PSxG - RightF_xG,
+                                       TRUE ~ NA_real_),
+      RightF_Gls_minus_xG = case_when(`Body Part` == "Right Foot" & Outcome == "Goal" ~ 1-xG,
+                                      `Body Part` == "Right Foot" & Outcome != "Goal" ~ 0-xG,
+                                      TRUE ~ NA_real_),
+      
+      LeftF_xG = case_when(`Body Part` == "Left Foot" ~ xG,
+                           TRUE ~ NA_real_),
+      LeftF_PSxG = case_when(`Body Part` == "Left Foot" ~ PSxG,
+                             TRUE ~ NA_real_),
+      LeftF_PSxG_minus_xG = case_when(`Body Part` == "Left Foot" & !is.na(LeftF_PSxG) & !is.na(LeftF_xG) ~ LeftF_PSxG - LeftF_xG,
+                                      TRUE ~ NA_real_),
+      LeftF_Gls_minus_xG = case_when(`Body Part` == "Left Foot" & Outcome == "Goal" ~ 1-xG,
+                                     `Body Part` == "Left Foot" & Outcome != "Goal" ~ 0-xG,
+                                     TRUE ~ NA_real_),
+      
+      Foot_xG = case_when(`Body Part` == "Left Foot" | `Body Part` == "Right Foot" ~ xG,
+                          TRUE ~ NA_real_),
+      Foot_PSxG = case_when(`Body Part` == "Left Foot" | `Body Part` == "Right Foot" ~ PSxG,
+                            TRUE ~ NA_real_),
+      Foot_PSxG_minus_xG = case_when(`Body Part` == "Left Foot" & !is.na(LeftF_PSxG) & !is.na(LeftF_xG) ~ LeftF_PSxG - LeftF_xG,
+                                     `Body Part` == "Right Foot" & !is.na(RightF_PSxG) & !is.na(RightF_xG) ~ RightF_PSxG - RightF_xG,
+                                     TRUE ~ NA_real_),
+      Foot_Gls_minus_xG = case_when(`Body Part` == "Left Foot" & Outcome == "Goal" ~ 1-xG,
+                                    `Body Part` == "Left Foot" & Outcome != "Goal" ~ 0-xG,
+                                    `Body Part` == "Right Foot" & Outcome == "Goal" ~ 1-xG,
+                                    `Body Part` == "Right Foot" & Outcome != "Goal" ~ 0-xG,
+                                    TRUE ~ NA_real_)
+    )}
+  }
   
   # Extract player goalkeeping data ----------
   print("Player - Keeper")
@@ -248,4 +306,8 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
 
 
 all_match_URLs <- get_all_match_urls(year = c(2024))
-fut_data_extraction(links_sel = all_match_URLs, links_examined = 1:10)
+new_all_match_URLs <- get_all_match_urls(year = c(2018))
+all_match_URLs[[1]] <- c(all_match_URLs[[1]], new_all_match_URLs[[1]])
+all_match_URLs[[2]] <- c(all_match_URLs[[2]], new_all_match_URLs[[2]])
+
+fut_data_extraction(links_sel = all_match_URLs, links_examined = 1:5)
