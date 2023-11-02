@@ -1,6 +1,7 @@
 library(worldfootballR)
 library(dplyr)
 
+# Functions -----
 # Function to get the match URLs from all the leagues of the requested season (default is current season)
 get_all_match_urls <- function(year = NA){
   # If no variables are given for either of the variables then it asumes it asks for current year
@@ -317,12 +318,10 @@ update_links <- function(new_year){
   save(all_match_URLs, file = "all_match_URLs.rda")
 }
 
-# Execution -------------------------------------------------------------------
+# Execution -----
 
-# Load the saved match URLs
+# Extract the data from the saved match URLs
 load("all_match_URLs.rda")
-
-# Extract the data
 fut_data_extraction(links_sel = new_all_match_URLs, links_examined = 1:100)
 
 
