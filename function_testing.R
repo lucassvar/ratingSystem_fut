@@ -69,8 +69,10 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins, ply_date_ran
   # Execute the z-score calculation for shooting stats only if there are shots available
   if (nrow(ply_shoot) > 0 & nrow(compPool_shoot) > 0) {
     # Add a Pos_1 column based on ID column between ML and SL data frames
-    ply_shoot <- merge(ply_shoot, playerML[, c("ID", "Pos_1")], by = "ID", all.x = TRUE)
-    compPool_shoot <- merge(compPool_shoot, compPoolML[, c("ID", "Pos_1")], by = "ID", all.x = TRUE)
+    ply_shoot <- merge(ply_shoot, playerML[, c("ID", "Pos_1")], by = "ID", all.x = TRUE) %>% mutate(PSxG_minus_xG = case_when(!is.na(PSxG) ~ PSxG - xG,
+                                                                                                                              is.na(PSxG) ~ 0 - xG))
+    compPool_shoot <- merge(compPool_shoot, compPoolML[, c("ID", "Pos_1")], by = "ID", all.x = TRUE) %>% mutate(PSxG_minus_xG = case_when(!is.na(PSxG) ~ PSxG - xG,
+                                                                                                                                          is.na(PSxG) ~ 0 - xG))
     
     # Shots per 90s for PLAYER
     ply_sh_per90 <- {as.data.frame(merge(sh_logs %>% filter(ID %in% playerML$ID), playerML[, c("ID", "Pos_1", "Min")], by = "ID", all.x = TRUE) %>%
@@ -96,16 +98,16 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins, ply_date_ran
                                           group_by(Player, Pos_1, `Body Part`) %>% 
                                           summarize(Shots_per_90_mean = mean(Shots_per_90, na.rm = TRUE) * 90))}
     
-    # Create Mean and SD (the later only for the comp. pool) columns for each player 
+    # Create Mean columns for each player 
     ply_shoot <- {as.data.frame(ply_shoot %>%
-                                  select(Squad, Player, Pos_1, xG, PSxG, Head_xG, Head_PSxG, Head_PSxG_minus_xG, Head_Gls_minus_xG,
+                                  select(Squad, Player, Pos_1, xG, PSxG, PSxG_minus_xG, Head_xG, Head_PSxG, Head_PSxG_minus_xG, Head_Gls_minus_xG,
                                          RightF_xG, RightF_PSxG, RightF_PSxG_minus_xG, RightF_Gls_minus_xG, LeftF_xG, LeftF_PSxG,
                                          LeftF_PSxG_minus_xG, LeftF_Gls_minus_xG, Foot_xG, Foot_PSxG, Foot_PSxG_minus_xG, Foot_Gls_minus_xG) %>%
                                   group_by(Squad, Player, Pos_1) %>%
                                   summarize(across(.fns = list(mean = ~mean(., na.rm = TRUE)),
                                                    .names = "{.col}_mean_{.fn}")))}
     compPool_shoot <- {as.data.frame(compPool_shoot %>%
-                                       select(Squad, Player, Pos_1, xG, PSxG, Head_xG, Head_PSxG, Head_PSxG_minus_xG, Head_Gls_minus_xG,
+                                       select(Squad, Player, Pos_1, xG, PSxG, PSxG_minus_xG, Head_xG, Head_PSxG, Head_PSxG_minus_xG, Head_Gls_minus_xG,
                                               RightF_xG, RightF_PSxG, RightF_PSxG_minus_xG, RightF_Gls_minus_xG, LeftF_xG, LeftF_PSxG,
                                               LeftF_PSxG_minus_xG, LeftF_Gls_minus_xG, Foot_xG, Foot_PSxG, Foot_PSxG_minus_xG, Foot_Gls_minus_xG) %>%
                                        group_by(Squad, Player, Pos_1) %>%
@@ -129,6 +131,8 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins, ply_date_ran
           xG = ((player_shoot$xG_mean_mean - mean(cp_shoot$xG_mean_mean, na.rm = T))/sd(cp_shoot$xG_mean_mean, na.rm = T)) * 0.8 +
             (mean(per_90_player$Shots_per_90_mean) - mean(per_90_compPool$Shots_per_90_mean, na.rm = T)/sd(per_90_compPool$Shots_per_90_mean, na.rm = T)) * 0.2,
           PSxG = ((player_shoot$PSxG_mean_mean - mean(cp_shoot$PSxG_mean_mean, na.rm = T))/sd(cp_shoot$PSxG_mean_mean, na.rm = T)) * 0.8 +
+            (mean(per_90_player$Shots_per_90_mean) - mean(per_90_compPool$Shots_per_90_mean, na.rm = T)/sd(per_90_compPool$Shots_per_90_mean, na.rm = T)) * 0.2,
+          PSxG_over_xG = ((player_shoot$PSxG_minus_xG_mean_mean - mean(cp_shoot$PSxG_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$PSxG_minus_xG_mean_mean, na.rm = T)) * 0.8 +
             (mean(per_90_player$Shots_per_90_mean) - mean(per_90_compPool$Shots_per_90_mean, na.rm = T)/sd(per_90_compPool$Shots_per_90_mean, na.rm = T)) * 0.2,
           Head_xG = (player_shoot$Head_xG_mean_mean - mean(cp_shoot$Head_xG_mean_mean, na.rm = T))/sd(cp_shoot$Head_xG_mean_mean, na.rm = T) * 0.8 +
             (ifelse(length((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)) * 0.2,
@@ -294,41 +298,19 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins, ply_date_ran
   
   # Merge the data frames (ML and shooting z-scores)
   if (nrow(ply_shoot) > 0 & nrow(compPool_shoot) > 0) {
-    player_zscores <- bind_rows(player_zscores, shooting_zscores)
+    player_zscores <- merge(player_zscores, shooting_zscores, by = c("Player", "Team", "Pos"))
   }
   
   return(player_zscores)
 }
 
 test <- plyML_zscores("Enzo Fernández",
-                          c("2023-08-01", "2023-11-01"),
-                          c("DM", "CM", "AM"),
-                          c("Premier League"),
-                          c("M"),
-                          c("2023-08-01", "2023-11-01"),
-                          c("Premier League", "La Liga", "Fußball-Bundesliga", "Serie A", "Ligue 1"))
-
-
-# Shooting Logs ----------------------
-
-load("rda/sh_logs.rda")
-
-ply_selected <- "Enzo Fernández"
-ply_team <- c("Chelsea")
-ply_exclude_mins <- 15
-ply_date_range <- c("2023-08-01", "2023-11-01")
-ply_positions <- c("DM", "CM", "AM")
-ply_leagues <- c("Premier League")
-comp_pool_exclude_mins <- 15
-comp_pool_sex <- c("M")
-compPool_date_range <- c("2023-08-01", "2023-11-01")
-compPool_ply_leagues <- c("Premier League", "La Liga", "Fußball-Bundesliga", "Serie A", "Ligue 1")
-
-
-
-
-
-
-
-
-
+                      c("Chelsea"),
+                      15,
+                      c("2023-08-01", "2023-11-01"),
+                      c("DM", "CM", "AM"),
+                      c("Premier League"),
+                      15,
+                      c("M"),
+                      c("2023-08-01", "2023-11-01"),
+                      c("Premier League", "La Liga", "Fußball-Bundesliga", "Serie A", "Ligue 1"))
