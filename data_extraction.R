@@ -35,7 +35,6 @@ get_all_match_urls <- function(year = NA){
   return(all_match_urls)
 }
 
-
 # Function to extract the data from a specific year
 fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 1:20){
   start_time <- Sys.time()
@@ -103,6 +102,7 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
       Head_PSxG = case_when(`Body Part` == "Head" ~ PSxG,
                             TRUE ~ NA_real_),
       Head_PSxG_minus_xG = case_when(`Body Part` == "Head" & !is.na(Head_PSxG) & !is.na(Head_xG) ~ Head_PSxG - Head_xG,
+                                     `Body Part` == "Head" & is.na(Head_PSxG) & !is.na(Head_xG) ~ 0 - Head_xG,
                                      TRUE ~ NA_real_),
       Head_Gls_minus_xG = case_when(`Body Part` == "Head" & Outcome == "Goal" ~ 1-xG,
                                     `Body Part` == "Head" & Outcome != "Goal" ~ 0-xG,
@@ -113,6 +113,7 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
       RightF_PSxG = case_when(`Body Part` == "Right Foot" ~ PSxG,
                               TRUE ~ NA_real_),
       RightF_PSxG_minus_xG = case_when(`Body Part` == "Right Foot" & !is.na(RightF_PSxG) & !is.na(RightF_xG) ~ RightF_PSxG - RightF_xG,
+                                       `Body Part` == "Right Foot" & is.na(RightF_PSxG) & !is.na(RightF_xG) & Outcome == "Blocked" ~ 0 - RightF_xG,
                                        TRUE ~ NA_real_),
       RightF_Gls_minus_xG = case_when(`Body Part` == "Right Foot" & Outcome == "Goal" ~ 1-xG,
                                       `Body Part` == "Right Foot" & Outcome != "Goal" ~ 0-xG,
@@ -123,6 +124,7 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
       LeftF_PSxG = case_when(`Body Part` == "Left Foot" ~ PSxG,
                              TRUE ~ NA_real_),
       LeftF_PSxG_minus_xG = case_when(`Body Part` == "Left Foot" & !is.na(LeftF_PSxG) & !is.na(LeftF_xG) ~ LeftF_PSxG - LeftF_xG,
+                                      `Body Part` == "Left Foot" & is.na(LeftF_PSxG) & !is.na(LeftF_xG) & Outcome == "Blocked" ~ 0 - LeftF_xG,
                                       TRUE ~ NA_real_),
       LeftF_Gls_minus_xG = case_when(`Body Part` == "Left Foot" & Outcome == "Goal" ~ 1-xG,
                                      `Body Part` == "Left Foot" & Outcome != "Goal" ~ 0-xG,
@@ -133,7 +135,9 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
       Foot_PSxG = case_when(`Body Part` == "Left Foot" | `Body Part` == "Right Foot" ~ PSxG,
                             TRUE ~ NA_real_),
       Foot_PSxG_minus_xG = case_when(`Body Part` == "Left Foot" & !is.na(LeftF_PSxG) & !is.na(LeftF_xG) ~ LeftF_PSxG - LeftF_xG,
+                                     `Body Part` == "Left Foot" & is.na(LeftF_PSxG) & !is.na(LeftF_xG) & Outcome == "Blocked" ~ 0 - LeftF_xG,
                                      `Body Part` == "Right Foot" & !is.na(RightF_PSxG) & !is.na(RightF_xG) ~ RightF_PSxG - RightF_xG,
+                                     `Body Part` == "Right Foot" & is.na(RightF_PSxG) & !is.na(RightF_xG) & Outcome == "Blocked" ~ 0 - RightF_xG,
                                      TRUE ~ NA_real_),
       Foot_Gls_minus_xG = case_when(`Body Part` == "Left Foot" & Outcome == "Goal" ~ 1-xG,
                                     `Body Part` == "Left Foot" & Outcome != "Goal" ~ 0-xG,
@@ -304,10 +308,21 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   Sys.time() - start_time
 }
 
+# Get new links
+update_links <- function(new_year){
+  load("all_match_URLs.rda")
+  new_links <- get_all_match_urls(year = new_year)
+  all_match_URLs[[1]] <- unique(c(all_match_URLs[[1]], new_links[[1]]))
+  all_match_URLs[[2]] <- unique(c(all_match_URLs[[2]], new_links[[2]]))
+  save(all_match_URLs, file = "all_match_URLs.rda")
+}
 
-all_match_URLs <- get_all_match_urls(year = c(2024))
-new_all_match_URLs <- get_all_match_urls(year = c(2018))
-all_match_URLs[[1]] <- c(all_match_URLs[[1]], new_all_match_URLs[[1]])
-all_match_URLs[[2]] <- c(all_match_URLs[[2]], new_all_match_URLs[[2]])
+# Execution -------------------------------------------------------------------
 
-fut_data_extraction(links_sel = all_match_URLs, links_examined = 1:5)
+# Load the saved match URLs
+load("all_match_URLs.rda")
+
+# Extract the data
+fut_data_extraction(links_sel = new_all_match_URLs, links_examined = 1:100)
+
+
