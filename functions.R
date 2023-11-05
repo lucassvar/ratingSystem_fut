@@ -311,11 +311,13 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
 
 # Get new links
 update_links <- function(new_year){
+  start_time <- Sys.time()
   load("rda/all_match_URLs.rda")
   new_links <- get_all_match_urls(year = new_year)
   all_match_URLs[[1]] <- setdiff(c(all_match_URLs[[1]], new_links[[1]]))
   all_match_URLs[[2]] <- setdiff(c(all_match_URLs[[2]], new_links[[2]]))
   save(all_match_URLs, file = "rda/all_match_URLs.rda")
+  Sys.time() - start_time
 }
 
 # Extract Match Logs Z-Scores for selected player
