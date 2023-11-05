@@ -324,6 +324,12 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins, ply_date_ran
   load("rda/playersMatchLogs.rda")
   load("rda/sh_logs.rda")
   
+  # Save the original dplyr.summarise.inform value
+  original_inform <- getOption("dplyr.summarise.inform")
+  
+  # Deactivate temporally the summarise() warnings
+  options(dplyr.summarise.inform = FALSE)
+  
   # Divide position (Pos) column by 4 (primary position to quaternary position)
   playersMatchLogs[c("Pos_1", "Pos_2", "Pos_3", "Pos_4")] <- t(sapply(strsplit(playersMatchLogs$Pos, ","), function(x) c(x, rep(NA, 4 - length(x)))))
   
@@ -614,6 +620,9 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins, ply_date_ran
   if (nrow(ply_shoot) > 0 & nrow(compPool_shoot) > 0) {
     player_zscores <- merge(player_zscores, shooting_zscores, by = c("Player", "Team", "Pos"))
   }
+  
+  # Restore the original dplyr.summarise.inform value
+  options(dplyr.summarise.inform = original_inform)
   
   return(player_zscores)
 }
