@@ -314,14 +314,14 @@ update_links <- function(new_year){
   start_time <- Sys.time()
   load("rda/all_match_URLs.rda")
   new_links <- get_all_match_urls(year = new_year)
-  all_match_URLs[[1]] <- setdiff(c(all_match_URLs[[1]], new_links[[1]]))
-  all_match_URLs[[2]] <- setdiff(c(all_match_URLs[[2]], new_links[[2]]))
+  all_match_URLs[[1]] <- unique(c(all_match_URLs[[1]], new_links[[1]]))
+  all_match_URLs[[2]] <- unique(c(all_match_URLs[[2]], new_links[[2]]))
   save(all_match_URLs, file = "rda/all_match_URLs.rda")
   Sys.time() - start_time
 }
 
 # Extract Match Logs Z-Scores for selected player
-plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins, ply_date_range, ply_positions, ply_leagues, comp_pool_exclude_mins, comp_pool_sex, compPool_date_range, compPool_ply_leagues){
+plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_date_range, ply_positions, ply_leagues, comp_pool_exclude_mins = 15, comp_pool_sex, compPool_date_range, compPool_ply_leagues, predicted_or_total = "total"){
   # Load data
   load("rda/playersMatchLogs.rda")
   load("rda/sh_logs.rda")
@@ -498,19 +498,31 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins, ply_date_ran
     }
   }
   
-  # Group by and calculate p90s stats
-  playerML <- playerML %>%
-    mutate_at(.vars = perMin_stats, .funs = list(~./Min)) %>%
-    mutate_at(.vars = perMin_stats, .funs = list(~ . * 90))
-  compPoolML <- compPoolML %>%
-    mutate_at(.vars = perMin_stats, .funs = list(~./Min)) %>%
-    mutate_at(.vars = perMin_stats, .funs = list(~ . * 90))
-  
-  # Group by position and calculate the mean for each stat
-  playerML <- as.data.frame({playerML %>%
+  # Calculate the p90 stats by predicted or total
+  if (predicted_or_total == "predicted") {
+    # Group by and calculate p90s stats
+    playerML <- playerML %>%
+      mutate_at(.vars = perMin_stats, .funs = list(~./Min)) %>%
+      mutate_at(.vars = perMin_stats, .funs = list(~ . * 90))
+    compPoolML <- compPoolML %>%
+      mutate_at(.vars = perMin_stats, .funs = list(~./Min)) %>%
+      mutate_at(.vars = perMin_stats, .funs = list(~ . * 90))
+    
+    # Group by position and calculate the mean for each stat
+    playerML <- as.data.frame({playerML %>%
+        group_by(Player, Team, Pos_1) %>%
+        summarise(across(where(is.numeric), mean, na.rm = TRUE))
+    })
+  } else if (predicted_or_total == "total") {
+    playerML <- playerML %>%
       group_by(Player, Team, Pos_1) %>%
-      summarise(across(where(is.numeric), mean, na.rm = TRUE))
-  })
+      summarize(across(where(is.numeric), sum, na.rm = TRUE), .groups = "keep") %>%
+      mutate_if(is.numeric, ~ . / (Min / 90))
+    compPoolML <- compPoolML %>%
+      group_by(Player, Team, Pos_1) %>%
+      summarize(across(where(is.numeric), sum, na.rm = TRUE), .groups = "keep") %>%
+      mutate_if(is.numeric, ~ . / (Min / 90))
+  }
   
   # For loop to calculate z-scores for each position the player has played (compared to the same in the comp. pool)
   player_zscores <- data.frame()
