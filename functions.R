@@ -326,10 +326,8 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
   load("rda/playersMatchLogs.rda")
   load("rda/sh_logs.rda")
   
-  # Save the original dplyr.summarise.inform value
+  # Save the original dplyr.summarise.inform and deactivate it
   original_inform <- getOption("dplyr.summarise.inform")
-  
-  # Deactivate temporally the summarise() warnings
   options(dplyr.summarise.inform = FALSE)
   
   # Divide position (Pos) column by 4 (primary position to quaternary position)
@@ -517,10 +515,12 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
     playerML <- playerML %>%
       group_by(Player, Team, Pos_1) %>%
       summarize(across(where(is.numeric), sum, na.rm = TRUE), .groups = "keep") %>%
+      filter(Min >= 90) %>%
       mutate_if(is.numeric, ~ . / (Min / 90))
     compPoolML <- compPoolML %>%
       group_by(Player, Team, Pos_1) %>%
       summarize(across(where(is.numeric), sum, na.rm = TRUE), .groups = "keep") %>%
+      filter(Min >= 90)  %>%
       mutate_if(is.numeric, ~ . / (Min / 90))
   }
   
