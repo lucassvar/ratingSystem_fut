@@ -85,7 +85,7 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   }
   # Convert columns to numeric and create new analysis columns (if sh_logs exists)
   if (!is.null(sh_logs)) {
-    # Function to change the Minute column to numeric (handles "90+2", converts to 92)
+    # Change the Minute column to numeric (handles "90+2", converts to 92)
     mins_to_numeric <- function(x) {
       if (grepl("\\+", x)) {
         parts <- strsplit(x, "\\+")
@@ -146,6 +146,11 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
                                     `Body Part` == "Right Foot" & Outcome != "Goal" ~ 0-xG,
                                     TRUE ~ NA_real_)
     )}
+    
+    # Adapts teams names to match the match logs data frame teams names
+    sh_logs <- sh_logs %>%
+      mutate(Squad = gsub("Nott'ham Forest", "Nottingham Forest", Squad),
+             Squad = gsub("\\bUtd\\b|\\bUtd\\.\\b", "United", Squad, ignore.case = TRUE))
   }
   
   # Extract player goalkeeping data ----------
@@ -545,7 +550,8 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
       xAG = (filtered_player$xAG - mean(filtered_compPool$xAG, na.rm = T))/sd(filtered_compPool$xAG, na.rm = T),
       PPA = (filtered_player$PPA - mean(filtered_compPool$PPA, na.rm = T))/sd(filtered_compPool$PPA, na.rm = T),
       Tackles = (filtered_player$Tkl_Tackles - mean(filtered_compPool$Tkl_Tackles, na.rm = T))/sd(filtered_compPool$Tkl_Tackles, na.rm = T),
-      Challenges_Tkld = (filtered_player$Tkl_Challenges - mean(filtered_compPool$Tkl_Challenges, na.rm = T))/sd(filtered_compPool$Tkl_Challenges, na.rm = T),
+      Challenges_Tkld = (filtered_player$Tkl_percent_Challenges - mean(filtered_compPool$Tkl_percent_Challenges, na.rm = T))/sd(filtered_compPool$Tkl_percent_Challenges, na.rm = T) * 0.7 +
+        (filtered_player$Att_Challenges - mean(filtered_compPool$Att_Challenges, na.rm = T))/sd(filtered_compPool$Att_Challenges, na.rm = T) * 0.3,
       Blocks = (filtered_player$Blocks_Blocks - mean(filtered_compPool$Blocks_Blocks, na.rm = T))/sd(filtered_compPool$Blocks_Blocks, na.rm = T),
       Int = (filtered_player$Int.x - mean(filtered_compPool$Int.x, na.rm = T))/sd(filtered_compPool$Int.x, na.rm = T),
       TakeOns = ((filtered_player$Att_Take_Ons - mean(filtered_compPool$Att_Take_Ons, na.rm = T))/sd(filtered_compPool$Att_Take_Ons, na.rm = T)) * 0.7 +
