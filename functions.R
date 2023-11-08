@@ -539,14 +539,16 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
       Player = filtered_player$Player,
       Team = filtered_player$Team,
       Pos = filtered_player$Pos_1,
-      ProgPassDist = (filtered_player$PrgDist_Total - mean(filtered_compPool$PrgDist_Total, na.rm = T))/sd(filtered_compPool$PrgDist_Total, na.rm = T),
+      ProgPassDist = ((filtered_player$PrgDist_Total - mean(filtered_compPool$PrgDist_Total, na.rm = T))/sd(filtered_compPool$PrgDist_Total, na.rm = T)) * 0.4 +
+        ((filtered_player$PrgP - mean(filtered_compPool$PrgP, na.rm = T))/sd(filtered_compPool$PrgP, na.rm = T)) * 0.6,
       ShortPasses = ((filtered_player$Att_Short - mean(filtered_compPool$Att_Short, na.rm = T))/sd(filtered_compPool$Att_Short, na.rm = T)) * 0.3 +
         ((filtered_player$Cmp_percent_Short - mean(filtered_compPool$Cmp_percent_Short, na.rm = T))/sd(filtered_compPool$Cmp_percent_Short, na.rm = T)) * 0.7,
       MediumPasses = ((filtered_player$Att_Medium - mean(filtered_compPool$Att_Medium, na.rm = T))/sd(filtered_compPool$Att_Medium, na.rm = T)) * 0.3 +
         ((filtered_player$Cmp_percent_Medium - mean(filtered_compPool$Cmp_percent_Medium, na.rm = T))/sd(filtered_compPool$Cmp_percent_Medium, na.rm = T)) * 0.7,
       LongPasses = ((filtered_player$Att_Long - mean(filtered_compPool$Att_Long, na.rm = T))/sd(filtered_compPool$Att_Long, na.rm = T)) * 0.3 +
         ((filtered_player$Cmp_percent_Long - mean(filtered_compPool$Cmp_percent_Long, na.rm = T))/sd(filtered_compPool$Cmp_percent_Long, na.rm = T)) * 0.7,
-      ProgCarriesDist = (filtered_player$PrgDist_Carries - mean(filtered_compPool$PrgDist_Carries, na.rm = T))/sd(filtered_compPool$PrgDist_Carries, na.rm = T),
+      ProgCarriesDist = ((filtered_player$PrgDist_Carries - mean(filtered_compPool$PrgDist_Carries, na.rm = T))/sd(filtered_compPool$PrgDist_Carries, na.rm = T)) * 0.4 +
+        ((filtered_player$PrgC_Carries - mean(filtered_compPool$PrgC_Carries, na.rm = T))/sd(filtered_compPool$PrgC_Carries, na.rm = T)) * 0.6,
       xAG = (filtered_player$xAG - mean(filtered_compPool$xAG, na.rm = T))/sd(filtered_compPool$xAG, na.rm = T),
       PPA = (filtered_player$PPA - mean(filtered_compPool$PPA, na.rm = T))/sd(filtered_compPool$PPA, na.rm = T),
       Tackles = (filtered_player$Tkl_Tackles - mean(filtered_compPool$Tkl_Tackles, na.rm = T))/sd(filtered_compPool$Tkl_Tackles, na.rm = T),
