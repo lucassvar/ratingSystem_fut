@@ -85,7 +85,7 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   }
   # Convert columns to numeric and create new analysis columns (if sh_logs exists)
   if (!is.null(sh_logs)) {
-    # Change the Minute column to numeric (handles "90+2", converts to 92)
+    # Function to change the Minute column to numeric (handles "90+2", converts to 92)
     mins_to_numeric <- function(x) {
       if (grepl("\\+", x)) {
         parts <- strsplit(x, "\\+")
@@ -98,6 +98,10 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
     sh_logs <- {sh_logs %>% mutate(
       xG = as.numeric(xG),
       PSxG = as.numeric(PSxG),
+      Gls_over_xG = case_when(Outcome == "Goal" ~ 1 - xG,
+                              Outcome != "Goal" ~ 0 - xG),
+      PSxG_minus_xG = case_when(!is.na(PSxG) ~ PSxG - xG,
+                                is.na(PSxG) ~ 0 - xG),
       Head_xG = case_when(`Body Part` == "Head" ~ xG,
                           TRUE ~ NA_real_),
       Head_PSxG = case_when(`Body Part` == "Head" ~ PSxG,
@@ -453,44 +457,21 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
           Player = player_shoot$Player,
           Team = player_shoot$Squad,
           Pos = player_shoot$Pos_1,
-          xG = ((player_shoot$xG_mean_mean - mean(cp_shoot$xG_mean_mean, na.rm = T))/sd(cp_shoot$xG_mean_mean, na.rm = T)) * 0.8 +
-            (mean(per_90_player$Shots_per_90_mean) - mean(per_90_compPool$Shots_per_90_mean, na.rm = T)/sd(per_90_compPool$Shots_per_90_mean, na.rm = T)) * 0.2,
-          PSxG = ((player_shoot$PSxG_mean_mean - mean(cp_shoot$PSxG_mean_mean, na.rm = T))/sd(cp_shoot$PSxG_mean_mean, na.rm = T)) * 0.8 +
-            (mean(per_90_player$Shots_per_90_mean) - mean(per_90_compPool$Shots_per_90_mean, na.rm = T)/sd(per_90_compPool$Shots_per_90_mean, na.rm = T)) * 0.2,
-          PSxG_over_xG = ((player_shoot$PSxG_minus_xG_mean_mean - mean(cp_shoot$PSxG_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$PSxG_minus_xG_mean_mean, na.rm = T)) * 0.8 +
-            (mean(per_90_player$Shots_per_90_mean) - mean(per_90_compPool$Shots_per_90_mean, na.rm = T)/sd(per_90_compPool$Shots_per_90_mean, na.rm = T)) * 0.2,
-          Head_xG = (player_shoot$Head_xG_mean_mean - mean(cp_shoot$Head_xG_mean_mean, na.rm = T))/sd(cp_shoot$Head_xG_mean_mean, na.rm = T) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          Head_PSxG = (player_shoot$Head_PSxG_mean_mean - mean(cp_shoot$Head_PSxG_mean_mean, na.rm = T))/sd(cp_shoot$Head_PSxG_mean_mean, na.rm = T) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          Head_PSxG_over_xG = (player_shoot$Head_PSxG_minus_xG_mean_mean - mean(cp_shoot$Head_PSxG_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$Head_PSxG_minus_xG_mean_mean, na.rm = T) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          Head_Gls_over_xG = (player_shoot$Head_Gls_minus_xG_mean_mean - mean(cp_shoot$Head_Gls_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$Head_Gls_minus_xG_mean_mean, na.rm = T) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          Foot_xG = ((player_shoot$Foot_xG_mean_mean - mean(cp_shoot$Foot_xG_mean_mean, na.rm = T))/sd(cp_shoot$Foot_xG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          Foot_PsxG = ((player_shoot$Foot_PSxG_mean_mean - mean(cp_shoot$Foot_PSxG_mean_mean, na.rm = T))/sd(cp_shoot$Foot_PSxG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          Foot_PsxG_over_xG = ((player_shoot$Foot_PSxG_minus_xG_mean_mean - mean(cp_shoot$Foot_PSxG_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$Foot_PSxG_minus_xG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          Foot_Gls_over_xG = ((player_shoot$Foot_Gls_minus_xG_mean_mean - mean(cp_shoot$Foot_Gls_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$Foot_Gls_minus_xG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          RightF_xG = ((player_shoot$RightF_xG_mean_mean - mean(cp_shoot$RightF_xG_mean_mean, na.rm = T))/sd(cp_shoot$RightF_xG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          RightF_PSxG = ((player_shoot$RightF_PSxG_mean_mean - mean(cp_shoot$RightF_PSxG_mean_mean, na.rm = T))/sd(cp_shoot$RightF_PSxG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          RightF_PSxG_over_xG = ((player_shoot$RightF_PSxG_minus_xG_mean_mean - mean(cp_shoot$RightF_PSxG_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$RightF_PSxG_minus_xG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          RightF_Gls_over_xG = ((player_shoot$RightF_Gls_minus_xG_mean_mean - mean(cp_shoot$RightF_Gls_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$RightF_Gls_minus_xG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          LeftF_xG = ((player_shoot$LeftF_xG_mean_mean - mean(cp_shoot$LeftF_xG_mean_mean, na.rm = T))/sd(cp_shoot$LeftF_xG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          LeftF_PSxG = ((player_shoot$LeftF_PSxG_mean_mean - mean(cp_shoot$LeftF_PSxG_mean_mean, na.rm = T))/sd(cp_shoot$LeftF_PSxG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          LeftF_PSxG_over_xG = ((player_shoot$LeftF_PSxG_minus_xG_mean_mean - mean(cp_shoot$LeftF_PSxG_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$LeftF_PSxG_minus_xG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2,
-          LeftF_Gls_over_xG = ((player_shoot$LeftF_Gls_minus_xG_mean_mean - mean(cp_shoot$LeftF_Gls_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$LeftF_Gls_minus_xG_mean_mean, na.rm = T)) * 0.8 +
-            (ifelse(length((per_90_player %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean, na.rm = T)) * 0.2
+          Shooting = ((player_shoot$PSxG_minus_xG_mean_mean - mean(cp_shoot$PSxG_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$PSxG_minus_xG_mean_mean, na.rm = T)) * 0.45 +
+            ((player_shoot$Gls_over_xG_mean_mean - mean(cp_shoot$Gls_over_xG_mean_mean, na.rm = T))/sd(cp_shoot$Gls_over_xG_mean_mean, na.rm = T)) * 0.45 +
+            (mean(per_90_player$Shots_per_90_mean) - mean(per_90_compPool$Shots_per_90_mean, na.rm = T)/sd(per_90_compPool$Shots_per_90_mean, na.rm = T)) * 0.1,
+          Heading = (player_shoot$Head_PSxG_minus_xG_mean_mean - mean(cp_shoot$Head_PSxG_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$Head_PSxG_minus_xG_mean_mean, na.rm = T) * 0.45 +
+            (player_shoot$Head_Gls_minus_xG_mean_mean - mean(cp_shoot$Head_Gls_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$Head_Gls_minus_xG_mean_mean, na.rm = T) * 0.45 +
+            (ifelse(length((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Head"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Head"))$Shots_per_90_mean, na.rm = T)) * 0.1,
+          Foot_Shots = ((player_shoot$Foot_PSxG_minus_xG_mean_mean - mean(cp_shoot$Foot_PSxG_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$Foot_PSxG_minus_xG_mean_mean, na.rm = T)) * 0.45 +
+            ((player_shoot$Foot_Gls_minus_xG_mean_mean - mean(cp_shoot$Foot_Gls_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$Foot_Gls_minus_xG_mean_mean, na.rm = T)) * 0.45 +
+            (ifelse(length((per_90_player %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Left Foot" | `Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)) * 0.1,
+          RightFoot_Shots = ((player_shoot$RightF_PSxG_minus_xG_mean_mean - mean(cp_shoot$RightF_PSxG_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$RightF_PSxG_minus_xG_mean_mean, na.rm = T)) * 0.45 +
+            ((player_shoot$RightF_Gls_minus_xG_mean_mean - mean(cp_shoot$RightF_Gls_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$RightF_Gls_minus_xG_mean_mean, na.rm = T)) * 0.45 +
+            (ifelse(length((per_90_player %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Right Foot"))$Shots_per_90_mean, na.rm = T)) * 0.1,
+          LeftFoot_Shots = ((player_shoot$LeftF_PSxG_minus_xG_mean_mean - mean(cp_shoot$LeftF_PSxG_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$LeftF_PSxG_minus_xG_mean_mean, na.rm = T)) * 0.45 +
+            ((player_shoot$LeftF_Gls_minus_xG_mean_mean - mean(cp_shoot$LeftF_Gls_minus_xG_mean_mean, na.rm = T))/sd(cp_shoot$LeftF_Gls_minus_xG_mean_mean, na.rm = T)) * 0.45 +
+            (ifelse(length((per_90_player %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean) == 0, NaN, mean((per_90_player %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean)) - mean((per_90_compPool %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean, na.rm = T)/sd((per_90_compPool %>% filter(`Body Part` == "Left Foot"))$Shots_per_90_mean, na.rm = T)) * 0.1
         )
       }
       
