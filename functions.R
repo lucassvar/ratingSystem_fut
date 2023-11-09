@@ -398,10 +398,8 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
   # Execute the z-score calculation for shooting stats only if there are shots available
   if (nrow(ply_shoot) > 0 & nrow(compPool_shoot) > 0) {
     # Add a Pos_1 column based on ID column between ML and SL data frames
-    ply_shoot <- merge(ply_shoot, playerML[, c("ID", "Pos_1")], by = "ID", all.x = TRUE) %>% mutate(PSxG_minus_xG = case_when(!is.na(PSxG) ~ PSxG - xG,
-                                                                                                                              is.na(PSxG) ~ 0 - xG))
-    compPool_shoot <- merge(compPool_shoot, compPoolML[, c("ID", "Pos_1")], by = "ID", all.x = TRUE) %>% mutate(PSxG_minus_xG = case_when(!is.na(PSxG) ~ PSxG - xG,
-                                                                                                                                          is.na(PSxG) ~ 0 - xG))
+    ply_shoot <- merge(ply_shoot, playerML[, c("ID", "Pos_1")], by = "ID", all.x = TRUE)
+    compPool_shoot <- merge(compPool_shoot, compPoolML[, c("ID", "Pos_1")], by = "ID", all.x = TRUE)
     
     # Shots per 90s for PLAYER
     ply_sh_per90 <- {as.data.frame(merge(sh_logs %>% filter(ID %in% playerML$ID), playerML[, c("ID", "Pos_1", "Min")], by = "ID", all.x = TRUE) %>%
@@ -429,14 +427,14 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
     
     # Create Mean columns for each player 
     ply_shoot <- {as.data.frame(ply_shoot %>%
-                                  select(Squad, Player, Pos_1, xG, PSxG, PSxG_minus_xG, Head_xG, Head_PSxG, Head_PSxG_minus_xG, Head_Gls_minus_xG,
+                                  select(Squad, Player, Pos_1, xG, PSxG, Gls_over_xG, PSxG_minus_xG, Head_xG, Head_PSxG, Head_PSxG_minus_xG, Head_Gls_minus_xG,
                                          RightF_xG, RightF_PSxG, RightF_PSxG_minus_xG, RightF_Gls_minus_xG, LeftF_xG, LeftF_PSxG,
                                          LeftF_PSxG_minus_xG, LeftF_Gls_minus_xG, Foot_xG, Foot_PSxG, Foot_PSxG_minus_xG, Foot_Gls_minus_xG) %>%
                                   group_by(Squad, Player, Pos_1) %>%
                                   summarize(across(.fns = list(mean = ~mean(., na.rm = TRUE)),
                                                    .names = "{.col}_mean_{.fn}")))}
     compPool_shoot <- {as.data.frame(compPool_shoot %>%
-                                       select(Squad, Player, Pos_1, xG, PSxG, PSxG_minus_xG, Head_xG, Head_PSxG, Head_PSxG_minus_xG, Head_Gls_minus_xG,
+                                       select(Squad, Player, Pos_1, xG, PSxG, Gls_over_xG, PSxG_minus_xG, Head_xG, Head_PSxG, Head_PSxG_minus_xG, Head_Gls_minus_xG,
                                               RightF_xG, RightF_PSxG, RightF_PSxG_minus_xG, RightF_Gls_minus_xG, LeftF_xG, LeftF_PSxG,
                                               LeftF_PSxG_minus_xG, LeftF_Gls_minus_xG, Foot_xG, Foot_PSxG, Foot_PSxG_minus_xG, Foot_Gls_minus_xG) %>%
                                        group_by(Squad, Player, Pos_1) %>%
