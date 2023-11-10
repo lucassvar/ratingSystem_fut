@@ -330,7 +330,9 @@ update_links <- function(new_year){
 }
 
 # Extract Match Logs Z-Scores for selected player
-plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_date_range, ply_positions, ply_leagues, comp_pool_exclude_mins = 15, comp_pool_sex, compPool_date_range, compPool_ply_leagues, predicted_or_total = "total"){
+plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_date_range, ply_positions, ply_leagues, comp_pool_exclude_mins = 15, comp_pool_sex, compPool_date_range, compPool_ply_leagues, predicted_or_total = "total", pos_or_role = "role"){
+  start_time <- Sys.time()
+  
   # Load data
   load("rda/playersMatchLogs.rda")
   load("rda/sh_logs.rda")
@@ -341,6 +343,25 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
   
   # Divide position (Pos) column by 4 (primary position to quaternary position)
   playersMatchLogs[c("Pos_1", "Pos_2", "Pos_3", "Pos_4")] <- t(sapply(strsplit(playersMatchLogs$Pos, ","), function(x) c(x, rep(NA, 4 - length(x)))))
+  
+  # Create "Role" column and assign it to the Pos_1 column in the playersMatchLogs data frame
+  if (pos_or_role == "role") {
+    playersMatchLogs <- playersMatchLogs %>%
+      filter(!is.na(Pos_1)) %>%
+      mutate(
+        Role = case_when(
+          Pos_1 == "LW" | Pos_1 == "RW" | Pos_1 == "LM" | Pos_1 == "RM" ~ "W",
+          Pos_1 == "AM" | Pos_1 == "CM" ~ "CM",
+          Pos_1 == "DM" ~ "DM",
+          Pos_1 == "CB" ~ "CB",
+          Pos_1 == "FW" ~ "FW",
+          Pos_1 == "WB" | Pos_1 == "LB" | Pos_1 == "RB" ~ "FB",
+          Pos_1 == "GK" ~ "GK",
+          TRUE ~ NA_character_
+        )
+      )
+    playersMatchLogs$Pos_1 <- playersMatchLogs$Role
+  }
   
   # Selected stats for "per min" and for mean calculation
   perMin_stats <- {c("Cmp_Total", "Att_Total", "TotDist_Total", "PrgDist_Total", "Cmp_Short", "Att_Short",
@@ -625,5 +646,6 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
   # Restore the original dplyr.summarise.inform value
   options(dplyr.summarise.inform = original_inform)
   
+  print(Sys.time() - start_time)
   return(player_zscores)
 }
