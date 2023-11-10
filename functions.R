@@ -649,3 +649,221 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
   print(Sys.time() - start_time)
   return(player_zscores)
 }
+
+# Function to get all the teams percentiles
+teams_perc <- function(leagues_sel = "All", sex_sel = "M") {
+  start_time <- Sys.time()
+  
+  # Load data
+  load("rda/playersMatchLogs.rda")
+  
+  # Filter the data frame based on arguments
+  if (!"All" %in% leagues_sel) {
+    playersMatchLogs <- playersMatchLogs %>% select(League %in% leagues_sel)
+  }
+  
+  # Selected stats for "per min" and for mean calculation
+  perMin_stats <- {c("Cmp_Total", "Att_Total", "TotDist_Total", "PrgDist_Total", "Cmp_Short", "Att_Short",
+                     "Cmp_Medium", "Att_Medium", "Cmp_Long", "Att_Long", "Ast", "xAG", "xA", "KP", "Final_Third", "PPA", "CrsPA", "PrgP",
+                     "Att", "Live_Pass_Types", "Dead_Pass_Types", "FK_Pass_Types", "TB_Pass_Types", "Sw_Pass_Types", "Crs_Pass_Types",
+                     "TI_Pass_Types", "CK_Pass_Types", "In_Corner_Kicks", "Out_Corner_Kicks", "Str_Corner_Kicks", "Cmp_Outcomes", "Off_Outcomes",
+                     "Blocks_Outcomes", "Tkl_Tackles", "TklW_Tackles", "Def 3rd_Tackles", "Mid 3rd_Tackles", "Att 3rd_Tackles", "Tkl_Challenges",
+                     "Att_Challenges", "Lost_Challenges", "Blocks_Blocks", "Sh_Blocks", "Pass_Blocks", "Int.x", "Tkl+Int", "Clr", "Err",
+                     "Touches_Touches", "Def Pen_Touches", "Def 3rd_Touches", "Mid 3rd_Touches", "Att 3rd_Touches", "Att Pen_Touches",
+                     "Live_Touches", "Att_Take_Ons", "Succ_Take_Ons", "Tkld_Take_Ons", "Carries_Carries", "TotDist_Carries", "PrgDist_Carries", "PrgC_Carries",
+                     "Final_Third_Carries", "CPA_Carries", "Mis_Carries", "Dis_Carries", "Rec_Receiving", "PrgR_Receiving", "CrdY", "CrdR",
+                     "2CrdY", "Fls", "Fld", "Off", "Crs", "PKwon", "PKcon", "OG", "Recov", "Won_Aerial_Duels", "Lost_Aerial_Duels")}
+  mean_stats <- {c(perMin_stats,
+                   "Cmp_percent_Total", "Cmp_percent_Short", "Cmp_percent_Medium", "Cmp_percent_Long",
+                   "Tkl_percent_Challenges", "Succ_percent_Take_Ons", "Tkld_percent_Take_Ons",
+                   "Won_percent_Aerial_Duels")}
+  
+  # Divide position (Pos) column by 4 (primary position to quaternary position)
+  playersMatchLogs[c("Pos_1", "Pos_2", "Pos_3", "Pos_4")] <- t(sapply(strsplit(playersMatchLogs$Pos, ","), function(x) c(x, rep(NA, 4 - length(x)))))
+  
+  # Convert columns to numeric
+  playersMatchLogs[c(mean_stats, "Min")] <- lapply(playersMatchLogs[c(mean_stats, "Min")], as.numeric)
+  
+  # Add attempted aerials as a column
+  playersMatchLogs <- playersMatchLogs %>% mutate(Att_Aerials = Won_Aerial_Duels + Lost_Aerial_Duels)
+  
+  # Calculate stats per 90
+  stats_per90 <- playersMatchLogs %>% 
+    filter(Sex %in% sex_sel) %>% 
+    select(Team, League, Pos_1, Min, PrgDist_Total, Att_Short, Att_Medium, Att_Long,
+           PrgDist_Carries, xAG, PPA, Tkl_Tackles, Att_Challenges,
+           Blocks_Blocks, Int.x, Att_Take_Ons, CPA_Carries, Rec_Receiving, PrgR_Receiving, Att_Aerials) %>%
+    group_by(Team, League, Pos_1) %>%
+    filter(Min >= 15) %>%
+    summarize(across(where(is.numeric), sum, na.rm = TRUE), .groups = "keep") %>%
+    filter(Min >= 90) %>%
+    mutate_if(is.numeric, ~ . / (Min / 90))
+  
+  # For loop to iterate through stats per 90 based on position
+  teams_percentiles <- data.frame()
+  for (ply_pos in unique(stats_per90$Pos_1)) {
+    filtered_p90 <- stats_per90 %>% filter(Pos_1 == ply_pos)
+    perc_df <- data.frame(
+      Team = filtered_p90$Team,
+      League = filtered_p90$League,
+      Pos = filtered_p90$Pos_1,
+      ProgPassDist = percent_rank(coalesce(filtered_p90$PrgDist_Total, -Inf)),
+      ShortPasses = percent_rank(coalesce(filtered_p90$Att_Short, -Inf)),
+      MediumPasses = percent_rank(coalesce(filtered_p90$Att_Medium, -Inf)),
+      LongPasses = percent_rank(coalesce(filtered_p90$Att_Long, -Inf)),
+      ProgCarriesDist = percent_rank(coalesce(filtered_p90$PrgDist_Carries, -Inf)),
+      xAG = percent_rank(coalesce(filtered_p90$xAG, -Inf)),
+      PPA = percent_rank(coalesce(filtered_p90$PPA, -Inf)),
+      Tackles = percent_rank(coalesce(filtered_p90$Tkl_Tackles, -Inf)),
+      Challenges_Tkld = percent_rank(coalesce(filtered_p90$Att_Challenges, -Inf)),
+      Blocks = percent_rank(coalesce(filtered_p90$Blocks_Blocks, -Inf)),
+      Int = percent_rank(coalesce(filtered_p90$Int.x, -Inf)),
+      TakeOns = percent_rank(coalesce(filtered_p90$Att_Take_Ons, -Inf)),
+      CPA = percent_rank(coalesce(filtered_p90$CPA_Carries, -Inf)),
+      Received = percent_rank(coalesce(filtered_p90$Rec_Receiving, -Inf)),
+      ProgReceived = percent_rank(coalesce(filtered_p90$PrgR_Receiving, -Inf)),
+      AeerialDuels = percent_rank(coalesce(filtered_p90$Att_Aerials, -Inf))
+    )
+    teams_percentiles <- rbind(teams_percentiles, perc_df)
+  }
+  
+  print(Sys.time() - start_time)
+  return(teams_percentiles)
+}
+
+# Function to get the weights for each stat and pos
+percentile_weights <- function(ply_team = NULL, z_scores_df = NULL, leagues_sel = "All", sex_selected = "M", pos_or_role = "role") {
+  start_time <- Sys.time()
+  
+  # Load data
+  load("rda/playersMatchLogs.rda")
+  load("rda/similar_teams.rda")
+  
+  # Selected stats for "per min" and for mean calculation
+  perMin_stats <- {c("Cmp_Total", "Att_Total", "TotDist_Total", "PrgDist_Total", "Cmp_Short", "Att_Short",
+                     "Cmp_Medium", "Att_Medium", "Cmp_Long", "Att_Long", "Ast", "xAG", "xA", "KP", "Final_Third", "PPA", "CrsPA", "PrgP",
+                     "Att", "Live_Pass_Types", "Dead_Pass_Types", "FK_Pass_Types", "TB_Pass_Types", "Sw_Pass_Types", "Crs_Pass_Types",
+                     "TI_Pass_Types", "CK_Pass_Types", "In_Corner_Kicks", "Out_Corner_Kicks", "Str_Corner_Kicks", "Cmp_Outcomes", "Off_Outcomes",
+                     "Blocks_Outcomes", "Tkl_Tackles", "TklW_Tackles", "Def 3rd_Tackles", "Mid 3rd_Tackles", "Att 3rd_Tackles", "Tkl_Challenges",
+                     "Att_Challenges", "Lost_Challenges", "Blocks_Blocks", "Sh_Blocks", "Pass_Blocks", "Int.x", "Tkl+Int", "Clr", "Err",
+                     "Touches_Touches", "Def Pen_Touches", "Def 3rd_Touches", "Mid 3rd_Touches", "Att 3rd_Touches", "Att Pen_Touches",
+                     "Live_Touches", "Att_Take_Ons", "Succ_Take_Ons", "Tkld_Take_Ons", "Carries_Carries", "TotDist_Carries", "PrgDist_Carries", "PrgC_Carries",
+                     "Final_Third_Carries", "CPA_Carries", "Mis_Carries", "Dis_Carries", "Rec_Receiving", "PrgR_Receiving", "CrdY", "CrdR",
+                     "2CrdY", "Fls", "Fld", "Off", "Crs", "PKwon", "PKcon", "OG", "Recov", "Won_Aerial_Duels", "Lost_Aerial_Duels")}
+  mean_stats <- {c(perMin_stats,
+                   "Cmp_percent_Total", "Cmp_percent_Short", "Cmp_percent_Medium", "Cmp_percent_Long",
+                   "Tkl_percent_Challenges", "Succ_percent_Take_Ons", "Tkld_percent_Take_Ons",
+                   "Won_percent_Aerial_Duels")}
+  
+  # Divide position (Pos) column by 4 (primary position to quaternary position)
+  playersMatchLogs[c("Pos_1", "Pos_2", "Pos_3", "Pos_4")] <- t(sapply(strsplit(playersMatchLogs$Pos, ","), function(x) c(x, rep(NA, 4 - length(x)))))
+  
+  # Create "Role" column and assign it to the Pos_1 column in the playersMatchLogs data frame
+  if (pos_or_role == "role") {
+    playersMatchLogs <- playersMatchLogs %>%
+      filter(!is.na(Pos_1)) %>%
+      mutate(
+        Role = case_when(
+          Pos_1 == "LW" | Pos_1 == "RW" | Pos_1 == "LM" | Pos_1 == "RM" ~ "W",
+          Pos_1 == "AM" | Pos_1 == "CM" ~ "CM",
+          Pos_1 == "DM" ~ "DM",
+          Pos_1 == "CB" ~ "CB",
+          Pos_1 == "FW" ~ "FW",
+          Pos_1 == "WB" | Pos_1 == "LB" | Pos_1 == "RB" ~ "FB",
+          Pos_1 == "GK" ~ "GK",
+          TRUE ~ NA_character_
+        )
+      )
+    playersMatchLogs$Pos_1 <- playersMatchLogs$Role
+  }
+  
+  # Convert columns to numeric
+  playersMatchLogs[c(mean_stats, "Min")] <- lapply(playersMatchLogs[c(mean_stats, "Min")], as.numeric)
+  
+  # Add attempted aerials as a column
+  playersMatchLogs <- playersMatchLogs %>% mutate(Att_Aerials = Won_Aerial_Duels + Lost_Aerial_Duels)
+  
+  # Filter the arguments
+  if (!"All" %in% leagues_sel) {
+    playersMatchLogs <- playersMatchLogs %>% filter(League %in% leagues_sel)
+  }
+  
+  # Calculate stats per 90
+  stats_per90 <- playersMatchLogs %>% 
+    filter(Sex %in% sex_selected) %>%
+    select(Team, League, Pos_1, Min, PrgP, Att_Short, Att_Medium, Att_Long,
+           PrgC_Carries, xAG, PPA, Tkl_Tackles, Att_Challenges,
+           Blocks_Blocks, Int.x, Att_Take_Ons, CPA_Carries, Rec_Receiving, PrgR_Receiving, Att_Aerials) %>%
+    group_by(Team, League, Pos_1) %>%
+    filter(Min >= 15) %>%
+    summarize(across(where(is.numeric), sum, na.rm = TRUE), .groups = "keep") %>%
+    filter(Min >= 90) %>%
+    mutate_if(is.numeric, ~ . / (Min / 90))
+  
+  # For loop to iterate through stats per 90 based on position and calculate teams percentiles
+  similarity_weights <- data.frame()
+  for (ply_pos in unique(stats_per90$Pos_1)) {
+    filtered_p90 <- stats_per90 %>% filter(Pos_1 == ply_pos)
+    teams_percentiles <- data.frame(
+      Team = filtered_p90$Team,
+      League = filtered_p90$League,
+      Position = filtered_p90$Pos_1,
+      ProgPassDist = percent_rank(coalesce(filtered_p90$PrgP, -Inf)),
+      ShortPasses = percent_rank(coalesce(filtered_p90$Att_Short, -Inf)),
+      MediumPasses = percent_rank(coalesce(filtered_p90$Att_Medium, -Inf)),
+      LongPasses = percent_rank(coalesce(filtered_p90$Att_Long, -Inf)),
+      ProgCarriesDist = percent_rank(coalesce(filtered_p90$PrgC_Carries, -Inf)),
+      PPA = percent_rank(coalesce(filtered_p90$PPA, -Inf)),
+      Tackles = percent_rank(coalesce(filtered_p90$Tkl_Tackles, -Inf)),
+      Challenges_Tkld = percent_rank(coalesce(filtered_p90$Att_Challenges, -Inf)),
+      Blocks = percent_rank(coalesce(filtered_p90$Blocks_Blocks, -Inf)),
+      Int = percent_rank(coalesce(filtered_p90$Int.x, -Inf)),
+      TakeOns = percent_rank(coalesce(filtered_p90$Att_Take_Ons, -Inf)),
+      CPA = percent_rank(coalesce(filtered_p90$CPA_Carries, -Inf)),
+      Received = percent_rank(coalesce(filtered_p90$Rec_Receiving, -Inf)),
+      ProgReceived = percent_rank(coalesce(filtered_p90$PrgR_Receiving, -Inf)),
+      AerialDuels = percent_rank(coalesce(filtered_p90$Att_Aerials, -Inf))
+    )
+    
+    # Get similar teams
+    sim_teams <- (similar_teams %>% filter(Team == ply_team))$Similar_To
+    
+    # Calculate weights
+    similar_teams_percs <- teams_percentiles %>% filter(Team %in% sim_teams)
+    own_team_percs <- teams_percentiles %>% filter(Team %in% ply_team)
+    new_weights <- data.frame(
+      Position = ply_pos,
+      ProgPassDist = mean(similar_teams_percs$ProgPassDist) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$ProgPassDist) * 0.6, 0),
+      ShortPasses = mean(similar_teams_percs$ShortPasses) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$ShortPasses) * 0.6, 0),
+      MediumPasses = mean(similar_teams_percs$MediumPasses) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$MediumPasses) * 0.6, 0),
+      LongPasses = mean(similar_teams_percs$LongPasses) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$LongPasses) * 0.6, 0),
+      ProgCarriesDist = mean(similar_teams_percs$ProgCarriesDist) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$ProgCarriesDist) * 0.6, 0),
+      PPA = mean(similar_teams_percs$PPA) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$PPA) * 0.6, 0),
+      Tackles = mean(similar_teams_percs$Tackles) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$Tackles) * 0.6, 0),
+      Challenges_Tkld = mean(similar_teams_percs$Challenges_Tkld) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$Challenges_Tkld) * 0.6, 0),
+      Blocks = mean(similar_teams_percs$Blocks) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$Blocks) * 0.6, 0),
+      Int = mean(similar_teams_percs$Int) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$Int) * 0.6, 0),
+      TakeOns = mean(similar_teams_percs$TakeOns) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$TakeOns) * 0.6, 0),
+      CPA = mean(similar_teams_percs$CPA) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$CPA) * 0.6, 0),
+      Received = mean(similar_teams_percs$Received) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$Received) * 0.6, 0),
+      ProgReceived = mean(similar_teams_percs$ProgReceived) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$ProgReceived) * 0.6, 0),
+      AerialDuels = mean(similar_teams_percs$AerialDuels) * 0.4 + ifelse(nrow(own_team_percs) > 0, mean(own_team_percs$AerialDuels) * 0.6, 0)
+    )
+    
+    similarity_weights <- rbind(similarity_weights, new_weights)
+  }
+  
+  # Apply weights to the corresponding columns
+  common_cols <- intersect(names(z_scores_df), names(similarity_weights))
+  new_zscores <- z_scores_df
+  for (pos in new_zscores$Pos) {
+    df1_filtered <- new_zscores[new_zscores$Pos == pos, common_cols]
+    df2_filtered <- similarity_weights[similarity_weights$Position == pos, common_cols]
+    new_zscores[new_zscores$Pos == pos, common_cols] <- df1_filtered * df2_filtered
+  }
+  z_scores_df <- new_zscores
+  
+  print(Sys.time() - start_time)
+  return(z_scores_df)
+}
+
