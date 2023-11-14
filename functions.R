@@ -331,8 +331,6 @@ update_links <- function(new_year){
 
 # Extract Match Logs Z-Scores for selected player
 plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_date_range, ply_positions, ply_leagues, comp_pool_exclude_mins = 15, comp_pool_sex, compPool_date_range, compPool_ply_leagues, predicted_or_total = "total", pos_or_role = "role"){
-  start_time <- Sys.time()
-  
   # Load data
   load("rda/playersMatchLogs.rda")
   load("rda/sh_logs.rda")
@@ -646,14 +644,11 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
   # Restore the original dplyr.summarise.inform value
   options(dplyr.summarise.inform = original_inform)
   
-  print(Sys.time() - start_time)
   return(player_zscores)
 }
 
 # Function to get all the teams percentiles
 teams_perc <- function(leagues_sel = "All", sex_sel = "M") {
-  start_time <- Sys.time()
-  
   # Load data
   load("rda/playersMatchLogs.rda")
   
@@ -727,14 +722,11 @@ teams_perc <- function(leagues_sel = "All", sex_sel = "M") {
     teams_percentiles <- rbind(teams_percentiles, perc_df)
   }
   
-  print(Sys.time() - start_time)
   return(teams_percentiles)
 }
 
-# Function to get the weights for each stat and pos
+# Function to get the weighted z-scores based on similar teams' percentiles
 percentile_weights <- function(ply_team = NULL, z_scores_df = NULL, leagues_sel = "All", sex_selected = "M", pos_or_role = "role") {
-  start_time <- Sys.time()
-  
   # Load data
   load("rda/playersMatchLogs.rda")
   load("rda/similar_teams.rda")
@@ -863,7 +855,6 @@ percentile_weights <- function(ply_team = NULL, z_scores_df = NULL, leagues_sel 
   }
   z_scores_df <- new_zscores
   
-  print(Sys.time() - start_time)
   return(z_scores_df)
 }
 
