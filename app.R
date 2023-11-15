@@ -3,7 +3,7 @@ library(shiny)
 library(worldfootballR)
 library(dplyr)
 library(stringr)
-source("functions.R")  # Assuming there's a file named "functions.R" with custom functions
+source("functions.R")
 load("rda/playersMatchLogs.rda")
 load("rda/sh_logs.rda")
 
