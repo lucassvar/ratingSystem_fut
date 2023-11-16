@@ -266,11 +266,6 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   }
   
   
-  # Add the links extracted to the used data frames and save it
-  used_links <- c(used_links, unique(playersMatchLogs$Game_URL))
-  save(used_links, file = "rda/used_links.rda")
-  
-  
   # Now save the data frames in the rda folder (skip if the data frames were empty and bind if files exists)
   if (!is.null(sh_logs)) {
     if(file.exists("rda/sh_logs.rda")){
@@ -312,6 +307,10 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
     }
     save(teamsMatchLogs, file = "rda/teamsMatchLogs.rda")
   }
+  
+  # Add the links extracted to the used data frames and save it
+  used_links <- unique(c(used_links, masc_links, fem_links))
+  save(used_links, file = "rda/used_links.rda")
   
   
   # Print total running time
