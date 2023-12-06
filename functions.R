@@ -1,6 +1,7 @@
 library(worldfootballR)
 library(dplyr)
 library(stringr)
+library(ggplot2)
 
 # Function to get the match URLs from all the leagues of the requested season (default is current season)
 get_all_match_urls <- function(year = NA){
@@ -76,9 +77,9 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   # Check that neither of the data frames are empty before binding
   if (nrow(fem_sh_logs) == 0 && nrow(masc_sh_logs) == 0) {
     sh_logs <- NULL
-  } else if (nrow(fem_sh_logs) == 0) {
+  } else if (nrow(fem_sh_logs) == 0 | !exists(fem_sh_logs)) {
     sh_logs <- masc_sh_logs
-  } else if (nrow(masc_sh_logs) == 0) {
+  } else if (nrow(masc_sh_logs) == 0 | !exists(masc_sh_logs)) {
     sh_logs <- fem_sh_logs
   } else {
     sh_logs <- bind_rows(fem_sh_logs, masc_sh_logs)
@@ -165,9 +166,9 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   # Check that neither of the data frames are empty before binding
   if (nrow(fem_ply_keeper) == 0 && nrow(masc_ply_keeper) == 0) {
     ply_keeper <- NULL
-  } else if (nrow(fem_ply_keeper) == 0) {
+  } else if (nrow(fem_ply_keeper) == 0 | !exists(fem_ply_keeper)) {
     ply_keeper <- masc_ply_keeper
-  } else if (nrow(masc_ply_keeper) == 0) {
+  } else if (nrow(masc_ply_keeper) == 0 | !exists(masc_ply_keeper)) {
     ply_keeper <- fem_ply_keeper
   } else {
     ply_keeper <- bind_rows(fem_ply_keeper, masc_ply_keeper)
@@ -182,9 +183,9 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   # Check that neither of the data frames are empty before binding
   if (nrow(fem_team_keeper) == 0 && nrow(masc_team_keeper) == 0) {
     team_keeper <- NULL
-  } else if (nrow(fem_team_keeper) == 0) {
+  } else if (nrow(fem_team_keeper) == 0 | !exists(fem_team_keeper)) {
     team_keeper <- masc_team_keeper
-  } else if (nrow(masc_team_keeper) == 0) {
+  } else if (nrow(masc_team_keeper) == 0 | !exists(masc_team_keeper)) {
     team_keeper <- fem_team_keeper
   } else {
     team_keeper <- bind_rows(fem_team_keeper, masc_team_keeper)
@@ -205,9 +206,9 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
     # Check that neither of the data frames are empty before binding
     if (nrow(fem_playerML) == 0 && nrow(masc_playerML) == 0) {
       playerML <- NULL
-    } else if (nrow(fem_playerML) == 0) {
+    } else if (nrow(fem_playerML) == 0 | !exists(fem_playerML)) {
       playerML <- masc_playerML
-    } else if (nrow(masc_playerML) == 0) {
+    } else if (nrow(masc_playerML) == 0 | !exists(masc_playerML)) {
       playerML <- fem_playerML
     } else {
       playerML <- bind_rows(fem_playerML, masc_playerML)
@@ -226,9 +227,9 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
     # Check that neither of the data frames are empty before binding
     if (nrow(fem_teamML) == 0 && nrow(masc_teamML) == 0) {
       teamML <- NULL
-    } else if (nrow(fem_teamML) == 0) {
+    } else if (nrow(fem_teamML) == 0 | !exists(fem_teamML)) {
       teamML <- masc_teamML
-    } else if (nrow(masc_teamML) == 0) {
+    } else if (nrow(masc_teamML) == 0 | !exists(masc_teamML)) {
       teamML <- fem_teamML
     } else {
       teamML <- bind_rows(fem_teamML, masc_teamML)
@@ -646,7 +647,7 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
   return(player_zscores)
 }
 
-# Function to get all the teams percentiles
+# Get all the teams percentiles
 teams_perc <- function(leagues_sel = "All", sex_sel = "M") {
   # Load data
   load("rda/playersMatchLogs.rda")
@@ -724,7 +725,7 @@ teams_perc <- function(leagues_sel = "All", sex_sel = "M") {
   return(teams_percentiles)
 }
 
-# Function to get the weighted z-scores based on similar teams' percentiles
+# Get the weighted z-scores based on similar teams' percentiles
 percentile_weights <- function(ply_team = NULL, z_scores_df = NULL, leagues_sel = "All", sex_selected = "M", pos_or_role = "role") {
   # Load data
   load("rda/playersMatchLogs.rda")
@@ -857,3 +858,59 @@ percentile_weights <- function(ply_team = NULL, z_scores_df = NULL, leagues_sel 
   return(z_scores_df)
 }
 
+# Create plot based on z-score df
+z_scores_plot <- function(test_zsc = NULL, player_position = NULL) {
+  # Transform the data for rendering in a table
+  ts_df <- data.frame()
+  
+  # Subset the data for the current player position, excluding 'Team', 'Player', and 'Pos' columns
+  df <- test_zsc %>% filter(Pos == player_position) %>% select(-Team, -Player, -Pos)
+  
+  # Check if 'ts_df' is empty to initialize it with the first player position
+  if (nrow(ts_df) == 0) {
+    ts_df <- data.frame(stat = names(df),
+                        position = rep(player_position, length(df)),
+                        z_score = as.numeric(df[1, ]))
+  } else {
+    # Append new data for subsequent player positions
+    new_df <- data.frame(stat = names(df),
+                         position = rep(player_position, length(df)),
+                         z_score = as.numeric(df[1, ]))
+    ts_df <- bind_rows(ts_df, new_df)
+  }
+  
+  
+  # Filter by position and create HEX code column
+  df <- {(ts_df %>% filter(position == "CM") %>% mutate(z_score = case_when(is.nan(z_score) ~ 0, !is.nan(z_score) ~ z_score))) %>%
+      mutate(color_codes = case_when(z_score <= -1.28 ~ "#a62c2b",
+                                     z_score > -1.28 & z_score <= -0.84 ~ "#c44841",
+                                     z_score > -0.84 & z_score <= -0.52 ~ "#e36359",
+                                     z_score > -0.52 & z_score <= -0.25 ~ "#ff7e72",
+                                     z_score > -0.25 & z_score < 0 ~ "#ff998b",
+                                     z_score == 0 ~ "#ffffff",
+                                     z_score > 0 & z_score < 0.25 ~ "#6daa7f",
+                                     z_score >= 0.25 & z_score < 0.52 ~ "#548f66",
+                                     z_score >= 0.52 & z_score < 0.84 ~ "#3a754e",
+                                     z_score >= 0.84 & z_score < 1.28 ~ "#205c37",
+                                     z_score >= 1.28 ~ "#014421"))}
+  
+  
+  
+  plot <- ggplot(df, aes(x = z_score, y = stat, fill = color_codes)) +
+    geom_bar(stat = "identity") +
+    geom_text(aes(label = round(z_score, 2),
+                  hjust = ifelse(z_score > 0, -0.8, ifelse(z_score <0, 1.3, 0.5))),
+              position = position_dodge(0.9),
+              vjust = 0.2,
+              color = "black") +
+    scale_fill_identity() + 
+    theme(panel.background = element_blank(),
+          panel.grid.major.y = element_line(color = "darkgray"),
+          axis.text.y = element_text(size = 12),
+          axis.title.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.title.y = element_blank()) +
+    labs(title = paste(test_zsc$Player[1], " - " , player_position))
+  
+  return(plot)
+}
