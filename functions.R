@@ -71,21 +71,24 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   
   # Extract shooting logs ----------
   print("Shooting Logs")
+  fem_sh_logs <- masc_sh_logs <- data.frame()
   fem_sh_logs <- fb_match_shooting(fem_links) %>% mutate(Sex = "W")
   masc_sh_logs <- fb_match_shooting(masc_links) %>% mutate(Sex = "M")
   
   # Check that neither of the data frames are empty before binding
   if (nrow(fem_sh_logs) == 0 && nrow(masc_sh_logs) == 0) {
     sh_logs <- NULL
-  } else if (nrow(fem_sh_logs) == 0 | !exists(fem_sh_logs)) {
+  } else if (nrow(fem_sh_logs) == 0) {
     sh_logs <- masc_sh_logs
-  } else if (nrow(masc_sh_logs) == 0 | !exists(masc_sh_logs)) {
+  } else if (nrow(masc_sh_logs) == 0) {
     sh_logs <- fem_sh_logs
   } else {
     sh_logs <- bind_rows(fem_sh_logs, masc_sh_logs)
   }
+  
+  
   # Convert columns to numeric and create new analysis columns (if sh_logs exists)
-  if (!is.null(sh_logs)) {
+  if (exists("sh_logs")) {
     # Function to change the Minute column to numeric (handles "90+2", converts to 92)
     mins_to_numeric <- function(x) {
       if (grepl("\\+", x)) {
@@ -160,15 +163,16 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   
   # Extract player goalkeeping data ----------
   print("Player - Keeper")
+  fem_ply_keeper <- masc_ply_keeper <- data.frame()
   fem_ply_keeper <- fb_advanced_match_stats(match_url = fem_links, stat_type = "keeper", team_or_player = "player") %>% mutate(Sex = "W")
   masc_ply_keeper <- fb_advanced_match_stats(match_url = masc_links, stat_type = "keeper", team_or_player = "player") %>% mutate(Sex = "M")
   
   # Check that neither of the data frames are empty before binding
   if (nrow(fem_ply_keeper) == 0 && nrow(masc_ply_keeper) == 0) {
     ply_keeper <- NULL
-  } else if (nrow(fem_ply_keeper) == 0 | !exists(fem_ply_keeper)) {
+  } else if (nrow(fem_ply_keeper) == 0) {
     ply_keeper <- masc_ply_keeper
-  } else if (nrow(masc_ply_keeper) == 0 | !exists(masc_ply_keeper)) {
+  } else if (nrow(masc_ply_keeper) == 0) {
     ply_keeper <- fem_ply_keeper
   } else {
     ply_keeper <- bind_rows(fem_ply_keeper, masc_ply_keeper)
@@ -177,25 +181,28 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   
   # Extract team goalkeeping data ----------
   print("Team - Keeper")
+  fem_team_keeper <- masc_team_keeper <- data.frame()
   fem_team_keeper <- fb_advanced_match_stats(match_url = fem_links, stat_type = "keeper", team_or_player = "team") %>% mutate(Sex = "W")
   masc_team_keeper <- fb_advanced_match_stats(match_url = masc_links, stat_type = "keeper", team_or_player = "team") %>% mutate(Sex = "M")
   
   # Check that neither of the data frames are empty before binding
   if (nrow(fem_team_keeper) == 0 && nrow(masc_team_keeper) == 0) {
     team_keeper <- NULL
-  } else if (nrow(fem_team_keeper) == 0 | !exists(fem_team_keeper)) {
+  } else if (nrow(fem_team_keeper) == 0) {
     team_keeper <- masc_team_keeper
-  } else if (nrow(masc_team_keeper) == 0 | !exists(masc_team_keeper)) {
+  } else if (nrow(masc_team_keeper) == 0) {
     team_keeper <- fem_team_keeper
   } else {
     team_keeper <- bind_rows(fem_team_keeper, masc_team_keeper)
   }
   
   
+  # Extract player and team match logs -----------
   # For loop to extract the match logs from each stat type
   for (stat in stat_types) {
     # Player stats
     print(paste("Player -", stat))
+    fem_playerML <- masc_playerML <- data.frame()
     fem_playerML <- fb_advanced_match_stats(match_url = fem_links,
                                             stat_type = stat,
                                             team_or_player = "player") %>% mutate(Sex = "W")
@@ -206,9 +213,9 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
     # Check that neither of the data frames are empty before binding
     if (nrow(fem_playerML) == 0 && nrow(masc_playerML) == 0) {
       playerML <- NULL
-    } else if (nrow(fem_playerML) == 0 | !exists(fem_playerML)) {
+    } else if (nrow(fem_playerML) == 0) {
       playerML <- masc_playerML
-    } else if (nrow(masc_playerML) == 0 | !exists(masc_playerML)) {
+    } else if (nrow(masc_playerML) == 0) {
       playerML <- fem_playerML
     } else {
       playerML <- bind_rows(fem_playerML, masc_playerML)
@@ -217,6 +224,7 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
     
     # Team stats
     print(paste("Team -", stat))
+    fem_teamML <- masc_teamML <- data.frame()
     fem_teamML <- fb_advanced_match_stats(match_url = fem_links,
                                           stat_type = stat,
                                           team_or_player = "team") %>% mutate(Sex = "W")
@@ -227,9 +235,9 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
     # Check that neither of the data frames are empty before binding
     if (nrow(fem_teamML) == 0 && nrow(masc_teamML) == 0) {
       teamML <- NULL
-    } else if (nrow(fem_teamML) == 0 | !exists(fem_teamML)) {
+    } else if (nrow(fem_teamML) == 0) {
       teamML <- masc_teamML
-    } else if (nrow(masc_teamML) == 0 | !exists(masc_teamML)) {
+    } else if (nrow(masc_teamML) == 0) {
       teamML <- fem_teamML
     } else {
       teamML <- bind_rows(fem_teamML, masc_teamML)
