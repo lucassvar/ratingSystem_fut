@@ -879,27 +879,14 @@ percentile_weights <- function(ply_team = NULL, z_scores_df = NULL, leagues_sel 
 
 # Create plot based on z-score df
 z_scores_plot <- function(test_zsc = NULL, player_position = NULL) {
-  # Transform the data for rendering in a table
-  ts_df <- data.frame()
-  
   # Subset the data for the current player position, excluding 'Team', 'Player', and 'Pos' columns
   df <- test_zsc %>% filter(Pos == player_position) %>% select(-Team, -Player, -Pos)
-  
-  # Check if 'ts_df' is empty to initialize it with the first player position
-  if (nrow(ts_df) == 0) {
-    ts_df <- data.frame(stat = names(df),
-                        position = rep(player_position, length(df)),
-                        z_score = as.numeric(df[1, ]))
-  } else {
-    # Append new data for subsequent player positions
-    new_df <- data.frame(stat = names(df),
-                         position = rep(player_position, length(df)),
-                         z_score = as.numeric(df[1, ]))
-    ts_df <- bind_rows(ts_df, new_df)
-  }
+  ts_df <- data.frame(stat = names(df),
+                      position = rep(player_position, length(df)),
+                      z_score = as.numeric(df[1, ]))
   
   # Filter by position and create HEX code column
-  df <- {(ts_df %>% filter(position == "CM") %>% mutate(z_score = case_when(is.nan(z_score) ~ 0, !is.nan(z_score) ~ z_score))) %>%
+  df <- {(ts_df %>% mutate(z_score = case_when(is.nan(z_score) ~ 0, !is.nan(z_score) ~ z_score))) %>%
       mutate(color_codes = case_when(z_score <= -1.28 ~ "#a62c2b",
                                      z_score > -1.28 & z_score <= -0.84 ~ "#c44841",
                                      z_score > -0.84 & z_score <= -0.52 ~ "#e36359",
