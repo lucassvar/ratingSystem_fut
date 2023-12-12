@@ -2,6 +2,7 @@ library(worldfootballR)
 library(dplyr)
 library(stringr)
 library(ggplot2)
+library(forcats)
 
 # Function to get the match URLs from all the leagues of the requested season (default is current season)
 get_all_match_urls <- function(year = NA){
@@ -72,8 +73,10 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   # Extract shooting logs ----------
   print("Shooting Logs")
   fem_sh_logs <- masc_sh_logs <- data.frame()
-  fem_sh_logs <- fb_match_shooting(fem_links) %>% mutate(Sex = "W")
-  masc_sh_logs <- fb_match_shooting(masc_links) %>% mutate(Sex = "M")
+  tryCatch({
+    fem_sh_logs <- fb_match_shooting(fem_links) %>% mutate(Sex = "W")
+    masc_sh_logs <- fb_match_shooting(masc_links) %>% mutate(Sex = "M")
+  })
   
   # Check that neither of the data frames are empty before binding
   if (nrow(fem_sh_logs) == 0 && nrow(masc_sh_logs) == 0) {
@@ -164,8 +167,10 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   # Extract player goalkeeping data ----------
   print("Player - Keeper")
   fem_ply_keeper <- masc_ply_keeper <- data.frame()
-  fem_ply_keeper <- fb_advanced_match_stats(match_url = fem_links, stat_type = "keeper", team_or_player = "player") %>% mutate(Sex = "W")
-  masc_ply_keeper <- fb_advanced_match_stats(match_url = masc_links, stat_type = "keeper", team_or_player = "player") %>% mutate(Sex = "M")
+  tryCatch({
+    fem_ply_keeper <- fb_advanced_match_stats(match_url = fem_links, stat_type = "keeper", team_or_player = "player") %>% mutate(Sex = "W")
+    masc_ply_keeper <- fb_advanced_match_stats(match_url = masc_links, stat_type = "keeper", team_or_player = "player") %>% mutate(Sex = "M")
+  })
   
   # Check that neither of the data frames are empty before binding
   if (nrow(fem_ply_keeper) == 0 && nrow(masc_ply_keeper) == 0) {
@@ -182,8 +187,10 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   # Extract team goalkeeping data ----------
   print("Team - Keeper")
   fem_team_keeper <- masc_team_keeper <- data.frame()
-  fem_team_keeper <- fb_advanced_match_stats(match_url = fem_links, stat_type = "keeper", team_or_player = "team") %>% mutate(Sex = "W")
-  masc_team_keeper <- fb_advanced_match_stats(match_url = masc_links, stat_type = "keeper", team_or_player = "team") %>% mutate(Sex = "M")
+  tryCatch({
+    fem_team_keeper <- fb_advanced_match_stats(match_url = fem_links, stat_type = "keeper", team_or_player = "team") %>% mutate(Sex = "W")
+    masc_team_keeper <- fb_advanced_match_stats(match_url = masc_links, stat_type = "keeper", team_or_player = "team") %>% mutate(Sex = "M")
+  })
   
   # Check that neither of the data frames are empty before binding
   if (nrow(fem_team_keeper) == 0 && nrow(masc_team_keeper) == 0) {
@@ -203,12 +210,14 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
     # Player stats
     print(paste("Player -", stat))
     fem_playerML <- masc_playerML <- data.frame()
-    fem_playerML <- fb_advanced_match_stats(match_url = fem_links,
-                                            stat_type = stat,
-                                            team_or_player = "player") %>% mutate(Sex = "W")
-    masc_playerML <- fb_advanced_match_stats(match_url = masc_links,
-                                             stat_type = stat,
-                                             team_or_player = "player") %>% mutate(Sex = "M")
+    tryCatch({
+      fem_playerML <- fb_advanced_match_stats(match_url = fem_links,
+                                              stat_type = stat,
+                                              team_or_player = "player") %>% mutate(Sex = "W")
+      masc_playerML <- fb_advanced_match_stats(match_url = masc_links,
+                                               stat_type = stat,
+                                               team_or_player = "player") %>% mutate(Sex = "M")
+    })
     
     # Check that neither of the data frames are empty before binding
     if (nrow(fem_playerML) == 0 && nrow(masc_playerML) == 0) {
@@ -225,12 +234,14 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
     # Team stats
     print(paste("Team -", stat))
     fem_teamML <- masc_teamML <- data.frame()
-    fem_teamML <- fb_advanced_match_stats(match_url = fem_links,
-                                          stat_type = stat,
-                                          team_or_player = "team") %>% mutate(Sex = "W")
-    masc_teamML <- fb_advanced_match_stats(match_url = masc_links,
-                                           stat_type = stat,
-                                           team_or_player = "team") %>% mutate(Sex = "M")
+    tryCatch({
+      fem_teamML <- fb_advanced_match_stats(match_url = fem_links,
+                                            stat_type = stat,
+                                            team_or_player = "team") %>% mutate(Sex = "W")
+      masc_teamML <- fb_advanced_match_stats(match_url = masc_links,
+                                             stat_type = stat,
+                                             team_or_player = "team") %>% mutate(Sex = "M")
+    })
     
     # Check that neither of the data frames are empty before binding
     if (nrow(fem_teamML) == 0 && nrow(masc_teamML) == 0) {
@@ -887,7 +898,6 @@ z_scores_plot <- function(test_zsc = NULL, player_position = NULL) {
     ts_df <- bind_rows(ts_df, new_df)
   }
   
-  
   # Filter by position and create HEX code column
   df <- {(ts_df %>% filter(position == "CM") %>% mutate(z_score = case_when(is.nan(z_score) ~ 0, !is.nan(z_score) ~ z_score))) %>%
       mutate(color_codes = case_when(z_score <= -1.28 ~ "#a62c2b",
@@ -902,23 +912,68 @@ z_scores_plot <- function(test_zsc = NULL, player_position = NULL) {
                                      z_score >= 0.84 & z_score < 1.28 ~ "#205c37",
                                      z_score >= 1.28 ~ "#014421"))}
   
+  # Change stats names and add stat type to use as sorting parameter
+  df$stat <- {c("Pass Prog.", "Short Pass", "Medium Pass", "Long Pass", "Carrying Prog.", "xAG",
+                "Passes into Box", "Tackles", "Dribbling Tackles", "Blocks", "Interceptions", "Take-Ons",
+                "Carries into Box", "Receiving", "Prog. Receiving", "Ball Control", "Aerial Duels",
+                "Shooting", "Shots (Head)", "Shots (Foot)", "Right Foot Sh.", "Left Foot Sh")}
+  df$stat_type <- {c("Passing", "Passing", "Passing",
+                     "Passing", "Possession", "Passing",
+                     "Passing", "Defense", "Defense",
+                     "Defense", "Defense", "Possession",
+                     "Possession", "Possession", "Possession",
+                     "Possession", "Defense", "Shooting",
+                     "Shooting", "Shooting", "Shooting",
+                     "Shooting")}
   
+  # Determine the full name of the player's position
+  subt <- {case_when(
+    player_position == "CM" ~ "Central Midfielder",
+    player_position == "FW" ~ "Forward",
+    player_position == "WB" ~ "Wing Back",
+    player_position == "AM" ~ "Attacking Midfielder",
+    player_position == "CB" ~ "Centreback",
+    player_position == "GK" ~ "Goalkeeper",
+    player_position == "RB" ~ "Right Back",
+    player_position == "LM" ~ "Left Midfielder",
+    player_position == "RW" ~ "Right Winger",
+    player_position == "RM" ~ "Right Midfielder",
+    player_position == "LB" ~ "Left Back",
+    player_position == "LW" ~ "Left Winger",
+    player_position == "DM" ~ "Defensive Midfielder",
+    player_position == "DF" ~ "Defender",
+    player_position == "MF" ~ "Midfielder",
+    player_position == "FB" ~ "Fullback",
+    player_position == "W" ~ "Winger",
+    TRUE ~ "N"
+  )}
   
-  plot <- ggplot(df, aes(x = z_score, y = stat, fill = color_codes)) +
+  # Generate plot and save it with hq
+  plot <- df %>% 
+    mutate(stat = fct_reorder(stat, stat_type, .desc = TRUE)) %>%
+    ggplot(aes(x = z_score, y = stat, fill = color_codes)) +
     geom_bar(stat = "identity") +
     geom_text(aes(label = round(z_score, 2),
-                  hjust = ifelse(z_score > 0, -0.8, ifelse(z_score <0, 1.3, 0.5))),
+                  hjust = ifelse(z_score > 0, -0.8, ifelse(z_score < 0, 1.3, 0.5))),
               position = position_dodge(0.9),
               vjust = 0.2,
-              color = "black") +
-    scale_fill_identity() + 
-    theme(panel.background = element_blank(),
-          panel.grid.major.y = element_line(color = "darkgray"),
-          axis.text.y = element_text(size = 12),
+              color = "white",
+              size = 4.5) +
+    scale_fill_identity() +
+    labs(title = test_zsc$Player[1]) +
+    labs(subtitle = subt) +
+    theme(panel.background = element_rect(fill = "black"),
+          panel.grid.major.y = element_line(color = "#1E1E1E"),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          axis.text.y = element_text(size = 12, color = "white"),
+          axis.text.x = element_text(color = "white"),
           axis.title.x = element_blank(),
           axis.ticks.x = element_blank(),
-          axis.title.y = element_blank()) +
-    labs(title = paste(test_zsc$Player[1], " - " , player_position))
+          axis.title.y = element_blank(),
+          plot.title = element_text(hjust = 0.5, color = "white", size = 18),
+          plot.subtitle = element_text(hjust = 0.5, color = "white", size = 12),
+          plot.background = element_rect(fill = "black"))
   
-  return(plot)
+  ggsave("plot.png", plot, width = 16, height = 9, dpi = 300, units = "in")
 }
