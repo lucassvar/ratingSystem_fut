@@ -428,7 +428,7 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
     Sex %in% comp_pool_sex,
     Min >= comp_pool_exclude_mins
   )
-  
+
   # Create the sh_logs data frames for both player and Comp Pool
   ply_shoot <- sh_logs %>% filter(ID %in% playerML$ID)
   compPool_shoot <- sh_logs %>% filter(ID %in% compPoolML$ID)
@@ -590,7 +590,7 @@ plyML_zscores <- function(ply_selected, ply_team, ply_exclude_mins = 15, ply_dat
   }
   
   # Extract goalkeeping data for the player in case he is a goalkeeper
-  if (ply_pos == "GK") {
+  if ("GK" %in% playerML$Pos_1) {
     # Load data
     load("rda/ply_keeper.rda")
     
@@ -880,10 +880,20 @@ percentile_weights <- function(ply_team = NULL, z_scores_df = NULL, leagues_sel 
 # Create plot based on z-score df
 z_scores_plot <- function(test_zsc = NULL, player_position = NULL) {
   # Subset the data for the current player position, excluding 'Team', 'Player', and 'Pos' columns
-  df <- test_zsc %>% filter(Pos == player_position) %>% select(-Team, -Player, -Pos)
+  if (player_position == "All") {
+    df <- as.data.frame({
+      test_zsc %>%
+        group_by(Player, Team) %>%
+        select(-Pos) %>%
+        summarise_all(~mean(., na.rm = TRUE))
+    }) %>% select(-Team, -Player)
+  } else {
+    df <- test_zsc %>% filter(Pos == player_position) %>% select(-Team, -Player, -Pos)
+  }
   ts_df <- data.frame(stat = names(df),
                       position = rep(player_position, length(df)),
                       z_score = as.numeric(df[1, ]))
+  
   
   # Filter by position and create HEX code column
   df <- {(ts_df %>% mutate(z_score = case_when(is.nan(z_score) ~ 0, !is.nan(z_score) ~ z_score))) %>%
@@ -932,6 +942,7 @@ z_scores_plot <- function(test_zsc = NULL, player_position = NULL) {
     player_position == "MF" ~ "Midfielder",
     player_position == "FB" ~ "Fullback",
     player_position == "W" ~ "Winger",
+    player_position == "All" ~ "All Positions",
     TRUE ~ "N"
   )}
   
@@ -941,9 +952,9 @@ z_scores_plot <- function(test_zsc = NULL, player_position = NULL) {
     ggplot(aes(x = z_score, y = stat, fill = color_codes)) +
     geom_bar(stat = "identity") +
     geom_text(aes(label = round(z_score, 2),
-                  hjust = ifelse(z_score > 0, -0.8, ifelse(z_score < 0, 1.3, 0.5))),
+                  hjust = ifelse(z_score > 0, -0.7, ifelse(z_score < 0, 1.3, 0.5))),
               position = position_dodge(0.9),
-              vjust = 0.2,
+              vjust = 0.5,
               color = "white",
               size = 4.5) +
     scale_fill_identity() +
