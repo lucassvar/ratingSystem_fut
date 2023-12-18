@@ -37,13 +37,13 @@ get_all_match_urls <- function(year = NA){
 }
 
 # Function to extract the data from a specific year
-fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 1:20, rate_sel = "80/20"){
+fut_data_extraction <- function(links_examined = 1:20, rate_sel = "80/20", year_sel = NA, links_sel = NA){
   load("rda/all_match_URLs.rda")
   start_time <- Sys.time()
   
-  # Check if at least one of the arguments was stablished when calling
-  if (missing(year_sel) && missing(links_sel)) {
-    stop("At least one of the arguments 'year_sel' or 'links_sel' should be given.")
+  # If links_sel is NA then use all_match_URLs
+  if (is.na(links_sel)) {
+    links_sel <- all_match_URLs
   }
   
   # Prepare Links ------------
