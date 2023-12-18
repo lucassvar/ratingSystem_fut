@@ -48,6 +48,10 @@ fut_data_extraction <- function(year_sel = NA, links_sel = NA, links_examined = 
   # Load links already used if there are any
   if (file.exists("rda/used_links.rda")) {load("rda/used_links.rda")} else {used_links <- c()}
   
+  # Remove NA values from links variable
+  all_match_URLs[1] <- na.omit(all_match_URLs[1])
+  all_match_URLs[2] <- na.omit(all_match_URLs[2])
+  
   # If there's no input of links then extract the ones from the year
   if (is.null(links_sel)) {links_sel <- get_all_match_urls(year = year_sel)}
   
