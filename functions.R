@@ -33,17 +33,17 @@ get_all_match_urls <- function(year = NA){
   all_match_urls <- list("male" = match_urls_MASC, "female" = match_urls_FEM)
   
   save(all_match_urls, file = "rda/all_match_urls.rda")
-  Sys.time() - start_time
+  return(all_match_urls)
 }
 
 # Function to extract the data from a specific year
-fut_data_extraction <- function(links_examined = 1:20, rate_sel = "80/20", year_sel = NA, links_sel = NA){
-  load("rda/all_match_URLs.rda")
+fut_data_extraction <- function(links_examined = 20, rate_sel = "80/20", year_sel = NA, links_sel = NA){
+  load("rda/all_match_urls.rda")
   start_time <- Sys.time()
   
-  # If links_sel is NA then use all_match_URLs
+  # If links_sel is NA then use all_match_urls
   if (is.na(links_sel)) {
-    links_sel <- all_match_URLs
+    links_sel <- all_match_urls
   }
   
   # Prepare Links ------------
@@ -56,8 +56,8 @@ fut_data_extraction <- function(links_examined = 1:20, rate_sel = "80/20", year_
   }
   
   # Remove NA values from links variable
-  links_sel$male <- na.omit(all_match_URLs$male)
-  links_sel$female <- na.omit(all_match_URLs$female)
+  links_sel$male <- na.omit(links_sel$male)
+  links_sel$female <- na.omit(links_sel$female)
   
   # If there's no input of links extract the ones from the year requested
   if (is.null(links_sel)) {
@@ -362,11 +362,11 @@ fut_data_extraction <- function(links_examined = 1:20, rate_sel = "80/20", year_
 # Get new links
 update_links <- function(new_year){
   start_time <- Sys.time()
-  load("rda/all_match_URLs.rda")
+  load("rda/all_match_urls.rda")
   new_links <- get_all_match_urls(year = new_year)
-  all_match_URLs[[1]] <- unique(c(new_links[[1]], all_match_URLs[[1]]))
-  all_match_URLs[[2]] <- unique(c(new_links[[2]], all_match_URLs[[2]]))
-  save(all_match_URLs, file = "rda/all_match_URLs.rda")
+  all_match_urls[["male"]] <- unique(c(new_links[["male"]], all_match_urls[["male"]]))
+  all_match_urls[["female"]] <- unique(c(new_links[["female"]], all_match_urls[["female"]]))
+  save(all_match_urls, file = "rda/all_match_urls.rda")
   Sys.time() - start_time
 }
 
