@@ -52,7 +52,7 @@ fut_data_extraction <- function(links_examined = 20, rate_sel = "80/20", year_se
   if (file.exists("rda/used_links.rda")) {
     load("rda/used_links.rda")
   } else {
-    used_links <- c("male" = 0, "female" = 0)
+    used_links <- list("male" = 0, "female" = 0)
   }
   
   # Remove NA values from links variable
@@ -65,8 +65,8 @@ fut_data_extraction <- function(links_examined = 20, rate_sel = "80/20", year_se
   }
   
   # Filter links_selected to only have links that haven't been used
-  masc_links <- setdiff(links_sel$male, used_links$male)
-  fem_links <- setdiff(links_sel$female, used_links$female)
+  masc_links <- setdiff(links_sel$male, used_links[["male"]])
+  fem_links <- setdiff(links_sel$female, used_links[["female"]])
   
   # Create amount for both male and female links (based on desired examined links and relevance rates)
   relevance_rates <- setNames((as.numeric(strsplit(rate_sel, "/")[[1]]))/100, c("male", "female"))
@@ -353,7 +353,7 @@ fut_data_extraction <- function(links_examined = 20, rate_sel = "80/20", year_se
   # Register Used Links ------------
   
   # Add the links extracted to the used data frames and save it
-  used_links <- list("male" = unique(c(used_links$male, masc_links)), "female" = unique(c(used_links$female, fem_links)))
+  used_links <- list("male" = unique(c(used_links[["male"]], masc_links)), "female" = unique(c(used_links[["female"]], fem_links)))
   save(used_links, file = "rda/used_links.rda")
   
   Sys.time() - start_time
